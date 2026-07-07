@@ -92,13 +92,13 @@ func newAttachmentsPatchCmd() *cobra.Command {
 					p := item.Data
 					version := "-"
 					if p.SeriesVersion != nil {
-						version = *p.SeriesVersion
+						version = fmt.Sprintf("v%d", *p.SeriesVersion)
 						if p.SeriesSeq != nil {
-							version = fmt.Sprintf("%s (%d)", version, *p.SeriesSeq)
+							version = fmt.Sprintf("%s patch %d", version, *p.SeriesSeq)
 						}
 					}
 					output.Detail(os.Stdout, [][2]string{
-						{"Attachment", strconv.Itoa(p.AttachmentID)},
+						{"Attachment", strconv.Itoa(id)},
 						{"Format", p.Format},
 						{"Series", version},
 						{"Subject", p.Subject},

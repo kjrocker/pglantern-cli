@@ -54,12 +54,18 @@ func newCommitsGetCmd() *cobra.Command {
 					{"Committed", c.CommittedAt},
 				}
 				for _, r := range c.Releases {
-					pairs = append(pairs, [2]string{"Release", fmt.Sprintf("%s (%s)", r.Branch, r.FirstTag)})
+					release := r.Branch
+					if r.FirstTag != "" {
+						release = fmt.Sprintf("%s (%s)", r.Branch, r.FirstTag)
+					}
+					pairs = append(pairs, [2]string{"Release", release})
 				}
 				output.Detail(os.Stdout, pairs)
-				fmt.Printf("\n%s\n", c.Subject)
+				// The body already begins with the subject line.
 				if c.Body != "" {
 					fmt.Printf("\n%s\n", c.Body)
+				} else {
+					fmt.Printf("\n%s\n", c.Subject)
 				}
 				if len(c.Files) > 0 {
 					fmt.Println()
@@ -95,7 +101,7 @@ func newCommitsThreadCmd() *cobra.Command {
 					fmt.Fprintln(os.Stderr, "no archived discussion found")
 				}
 				for _, ref := range t.UnresolvedRefs {
-					fmt.Fprintf(os.Stderr, "# unresolved ref: %s\n", ref)
+					fmt.Fprintf(os.Stderr, "# unresolved ref (%s): %s\n", ref.Source, ref.RefMessageID)
 				}
 			})
 		},

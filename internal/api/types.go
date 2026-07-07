@@ -107,7 +107,10 @@ type CommitThread struct {
 		ThreadID string           `json:"thread_id"`
 		Messages []MessageSummary `json:"messages"`
 	} `json:"threads"`
-	UnresolvedRefs []string `json:"unresolved_refs"`
+	UnresolvedRefs []struct {
+		Source       string `json:"source"`
+		RefMessageID string `json:"ref_message_id"`
+	} `json:"unresolved_refs"`
 }
 
 type SenderStats struct {
@@ -150,9 +153,8 @@ type PatchFile struct {
 }
 
 type Patch struct {
-	AttachmentID  int         `json:"attachment_id"`
 	Format        string      `json:"format"`
-	SeriesVersion *string     `json:"series_version"`
+	SeriesVersion *int        `json:"series_version"`
 	SeriesSeq     *int        `json:"series_seq"`
 	Subject       string      `json:"subject"`
 	Files         []PatchFile `json:"files"`
