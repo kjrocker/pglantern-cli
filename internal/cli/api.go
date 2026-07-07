@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kjrocker/horton/internal/output"
+	"codeberg.org/kehvyn/horton-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

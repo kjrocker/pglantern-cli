@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kjrocker/horton/internal/api"
-	"github.com/kjrocker/horton/internal/output"
+	"codeberg.org/kehvyn/horton-cli/internal/api"
+	"codeberg.org/kehvyn/horton-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

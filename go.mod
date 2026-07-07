@@ -1,4 +1,4 @@
-module github.com/kjrocker/horton
+module codeberg.org/kehvyn/horton-cli
 
 go 1.24.13
 
