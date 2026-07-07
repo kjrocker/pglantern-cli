@@ -33,6 +33,10 @@ func NewRootCmd() *cobra.Command {
 		newCommitsCmd(),
 		newSendersCmd(),
 		newAttachmentsCmd(),
+		newVersionsCmd(),
+		newActivityCmd(),
+		newImportsCmd(),
+		newAPICmd(),
 	)
 
 	return root
