@@ -30,6 +30,9 @@ func NewRootCmd() *cobra.Command {
 		newListsCmd(),
 		newMessagesCmd(),
 		newSearchCmd(),
+		newCommitsCmd(),
+		newSendersCmd(),
+		newAttachmentsCmd(),
 	)
 
 	return root
