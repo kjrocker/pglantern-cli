@@ -1,14 +1,33 @@
 package cli
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/kjrocker/horton/internal/api"
 	"github.com/kjrocker/horton/internal/output"
 	"github.com/spf13/cobra"
 )
+
+// normalizeMessageID turns a raw Message-Id into the base64url path token the
+// API routes on. A raw Message-Id always contains "@" (and may arrive wrapped
+// in the <> from a mail header), which base64url tokens never do, so the two
+// forms are unambiguous: anything without "@" is passed through as an
+// already-encoded token.
+func normalizeMessageID(arg string) string {
+	id := strings.Trim(arg, "<>")
+	if !strings.Contains(id, "@") {
+		return arg
+	}
+	return base64.RawURLEncoding.EncodeToString([]byte(id))
+}
+
+func messagePath(arg string, suffix string) string {
+	return "/messages/" + url.PathEscape(normalizeMessageID(arg)) + suffix
+}
 
 func messageRows(msgs []api.MessageSummary) [][]string {
 	rows := make([][]string, 0, len(msgs))
@@ -76,11 +95,11 @@ func newMessagesCmd() *cobra.Command {
 
 func newMessagesGetCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <b64id>",
-		Short: "Show one message (id is the base64url-encoded Message-Id)",
+		Use:   "get <message-id>",
+		Short: "Show one message by Message-Id",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path := "/messages/" + url.PathEscape(args[0])
+			path := messagePath(args[0], "")
 			return getRender(cmd, path, nil, func(item api.Item[api.MessageFull]) {
 				m := item.Data
 				pairs := [][2]string{
@@ -118,11 +137,11 @@ func newMessagesGetCmd() *cobra.Command {
 
 func newMessagesThreadCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "thread <b64id>",
+		Use:   "thread <message-id>",
 		Short: "Show the whole thread containing a message",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path := "/messages/" + url.PathEscape(args[0]) + "/thread"
+			path := messagePath(args[0], "/thread")
 			return getRender(cmd, path, nil, func(page api.Page[api.MessageSummary]) {
 				messageTable(page.Data)
 			})
@@ -132,11 +151,11 @@ func newMessagesThreadCmd() *cobra.Command {
 
 func newMessagesCommitsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "commits <b64id>",
+		Use:   "commits <message-id>",
 		Short: "Show commits that landed from a message's thread",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path := "/messages/" + url.PathEscape(args[0]) + "/commits"
+			path := messagePath(args[0], "/commits")
 			return getRender(cmd, path, nil, func(page api.Page[api.CommitGroup]) {
 				if len(page.Data) == 0 {
 					fmt.Fprintln(os.Stderr, "no commits landed from this thread")
@@ -157,11 +176,11 @@ func newMessagesCommitsCmd() *cobra.Command {
 
 func newMessagesRefsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "refs <b64id>",
+		Use:   "refs <message-id>",
 		Short: "Show references extracted from a message (shas, paths, CVEs, …)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path := "/messages/" + url.PathEscape(args[0]) + "/refs"
+			path := messagePath(args[0], "/refs")
 			return getRender(cmd, path, nil, func(page api.Page[api.Ref]) {
 				rows := make([][]string, 0, len(page.Data))
 				for _, r := range page.Data {
