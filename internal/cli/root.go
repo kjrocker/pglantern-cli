@@ -24,5 +24,11 @@ func NewRootCmd() *cobra.Command {
 	flags.String("host", "", "API host (default $HORTON_HOST, config file, or http://localhost:4000)")
 	flags.String("api-key", "", "API key (default $HORTON_API_KEY or config file)")
 
+	root.AddCommand(
+		newLoginCmd(),
+		newLogoutCmd(),
+		newListsCmd(),
+	)
+
 	return root
 }
