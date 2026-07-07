@@ -28,6 +28,8 @@ func NewRootCmd() *cobra.Command {
 		newLoginCmd(),
 		newLogoutCmd(),
 		newListsCmd(),
+		newMessagesCmd(),
+		newSearchCmd(),
 	)
 
 	return root
