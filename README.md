@@ -36,8 +36,8 @@ Overrides, highest first: `--api-key` / `--host` flags, then `HORTON_API_KEY` /
 ```sh
 horton lists
 horton messages --list pgsql-hackers --limit 10
-horton messages get <b64id>            # base64url-encoded Message-Id
-horton messages thread <b64id>
+horton messages get '<message-id>'     # raw Message-Id, straight from a table row
+horton messages thread '<message-id>'
 horton search vacuum full --committed --major 17
 horton senders --sort messages --dir desc
 horton senders get 42
@@ -51,6 +51,10 @@ horton versions gucs 17 --changed-since 16     # what changed between majors
 horton activity src/backend/access/    # merged commit + thread activity
 horton imports --list pgsql-hackers
 ```
+
+Message commands take the raw Message-Id exactly as tables print it (a
+surrounding `<>` from a mail header is fine) — the CLI base64url-encodes it
+into the URL for you. A token copied from an API URL also works as-is.
 
 Every command renders a human table by default; add `--json` for the raw
 response body (indented on a terminal, compact through a pipe):
