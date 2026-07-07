@@ -1,6 +1,6 @@
 # horton
 
-`gh`-style command-line client for the [Horton](https://github.com/kjrocker/pgml-api)
+`gh`-style command-line client for the [Horton](https://codeberg.org/kehvyn/horton)
 mailing-list-archive JSON API (`/api/v1`).
 
 It is deliberately a **dumb API client**: it checks required arguments and flag

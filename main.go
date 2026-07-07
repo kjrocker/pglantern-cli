@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/kjrocker/horton/internal/cli"
+	"codeberg.org/kehvyn/horton-cli/internal/cli"
 )
 
 func main() {
