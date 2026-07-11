@@ -32,6 +32,7 @@ func NewRootCmd() *cobra.Command {
 		newSearchCmd(),
 		newCommitsCmd(),
 		newSendersCmd(),
+		newThreadsCmd(),
 		newAttachmentsCmd(),
 		newVersionsCmd(),
 		newActivityCmd(),

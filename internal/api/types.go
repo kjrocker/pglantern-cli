@@ -137,6 +137,22 @@ type SenderFull struct {
 	Messages []MessagePreview `json:"messages"`
 }
 
+type ThreadStarter struct {
+	MessageID string  `json:"message_id"`
+	Subject   string  `json:"subject"`
+	SentAt    *string `json:"sent_at"`
+	Sender    *Sender `json:"sender"`
+}
+
+type ThreadSummary struct {
+	ThreadID       string         `json:"thread_id"`
+	Subject        string         `json:"subject"`
+	MessageCount   int            `json:"message_count"`
+	StartedAt      string         `json:"started_at"`
+	LastActivityAt string         `json:"last_activity_at"`
+	Starter        *ThreadStarter `json:"starter"`
+}
+
 type AttachmentRow struct {
 	ID          int     `json:"id"`
 	Filename    string  `json:"filename"`
