@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultHost = "http://localhost:4000"
+const defaultHost = "https://pglantern.com"
 
 // resolveHost: --host flag, then $HORTON_HOST, then config file, then the
-// Phoenix dev default.
+// hosted default.
 func resolveHost(cmd *cobra.Command, cfg config.Config) string {
 	if host, _ := cmd.Flags().GetString("host"); host != "" {
 		return host

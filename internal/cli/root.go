@@ -21,7 +21,7 @@ func NewRootCmd() *cobra.Command {
 
 	flags := root.PersistentFlags()
 	flags.Bool("json", false, "print the raw JSON response instead of a table")
-	flags.String("host", "", "API host (default $HORTON_HOST, config file, or http://localhost:4000)")
+	flags.String("host", "", "API host (default $HORTON_HOST, config file, or https://pglantern.com)")
 	flags.String("api-key", "", "API key (default $HORTON_API_KEY or config file)")
 
 	root.AddCommand(
@@ -38,6 +38,7 @@ func NewRootCmd() *cobra.Command {
 		newActivityCmd(),
 		newImportsCmd(),
 		newAPICmd(),
+		newGenerateSkillCmd(),
 	)
 
 	return root
