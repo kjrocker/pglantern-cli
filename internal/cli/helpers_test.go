@@ -98,6 +98,17 @@ func TestEnumFlag(t *testing.T) {
 	}
 }
 
+func TestSearchSortEnum(t *testing.T) {
+	// A known-bad --sort fails at parse time, before any HTTP call.
+	if err := newSearchCmd().Flags().Parse([]string{"--sort", "banana"}); err == nil {
+		t.Error("invalid --sort accepted")
+	}
+	// A valid value parses cleanly.
+	if err := newSearchCmd().Flags().Parse([]string{"--sort", "sent_at"}); err != nil {
+		t.Errorf("valid --sort rejected: %v", err)
+	}
+}
+
 func TestIntFlagRejectsGarbage(t *testing.T) {
 	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().Int("limit", 0, "")

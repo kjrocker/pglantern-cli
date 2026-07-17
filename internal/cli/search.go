@@ -24,7 +24,7 @@ func newSearchCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().String("sort", "", "sort order: relevance (default) or sent_at")
+	addEnumFlag(cmd, "sort", "sort order", "relevance", "sent_at")
 	cmd.Flags().String("sender", "", "substring match on sender email or name")
 	cmd.Flags().Bool("committed", false, "only threads with a landed commit")
 	cmd.Flags().String("path", "", "threads whose landed commit or patch touches this path prefix")
