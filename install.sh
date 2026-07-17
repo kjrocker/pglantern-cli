@@ -39,9 +39,12 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
-# 1. Platform detection. We ship Linux binaries only.
-os="$(uname -s)"
-[ "$os" = "Linux" ] || die "no prebuilt binaries for $os; build from source: https://codeberg.org/$REPO#install"
+# 1. Platform detection. We ship Linux and macOS binaries.
+case "$(uname -s)" in
+Linux) os="linux" ;;
+Darwin) os="darwin" ;;
+*) die "no prebuilt binaries for $(uname -s); build from source: https://codeberg.org/$REPO#install" ;;
+esac
 
 case "$(uname -m)" in
 x86_64) arch="amd64" ;;
@@ -78,7 +81,7 @@ if [ -z "$BIN_DIR" ]; then
 fi
 mkdir -p "$BIN_DIR" || die "cannot create $BIN_DIR"
 
-archive="horton_${version}_linux_${arch}.tar.gz"
+archive="horton_${version}_${os}_${arch}.tar.gz"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
