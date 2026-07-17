@@ -26,11 +26,11 @@ func newAttachmentsCmd() *cobra.Command {
 					}
 					rows = append(rows, []string{
 						strconv.Itoa(a.ID), output.Truncate(a.Filename, 40), a.ContentType,
-						strconv.Itoa(a.Size), patch, output.OrDash(a.MessageID),
+						output.HumanBytes(a.Size), patch, output.OrDash(a.MessageID),
 					})
 				}
 				output.Table(os.Stdout,
-					[]string{"ID", "FILENAME", "TYPE", "BYTES", "", "MESSAGE-ID"}, rows)
+					[]string{"ID", "FILENAME", "TYPE", "SIZE", "", "MESSAGE-ID"}, rows)
 				output.CursorFooter(page.NextCursor)
 			})
 		},
@@ -55,7 +55,7 @@ func newAttachmentsGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <id>",
 		Short: "Show one attachment's metadata",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("an attachment id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := attachmentID(args[0])
 			if err != nil {
@@ -68,7 +68,7 @@ func newAttachmentsGetCmd() *cobra.Command {
 						{"Id", strconv.Itoa(a.ID)},
 						{"Filename", a.Filename},
 						{"Type", a.ContentType},
-						{"Bytes", strconv.Itoa(a.Size)},
+						{"Size", output.HumanBytes(a.Size)},
 						{"Patch", strconv.FormatBool(a.IsPatch)},
 						{"Message-Id", output.OrDash(a.MessageID)},
 					})
@@ -81,7 +81,7 @@ func newAttachmentsPatchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "patch <id>",
 		Short: "Show the parsed patch summary for a patch attachment",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("an attachment id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := attachmentID(args[0])
 			if err != nil {
