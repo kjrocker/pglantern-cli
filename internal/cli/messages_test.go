@@ -9,30 +9,58 @@ func TestNormalizeMessageID(t *testing.T) {
 		want string
 	}{
 		{
-			name: "raw message-id is encoded",
+			name: "raw message-id passes through unchanged",
 			in:   "2294297.1780270682@sss.pgh.pa.us",
-			want: "MjI5NDI5Ny4xNzgwMjcwNjgyQHNzcy5wZ2gucGEudXM",
+			want: "2294297.1780270682@sss.pgh.pa.us",
 		},
 		{
-			name: "angle brackets from a mail header are stripped first",
+			name: "angle brackets from a mail header are stripped",
 			in:   "<2294297.1780270682@sss.pgh.pa.us>",
-			want: "MjI5NDI5Ny4xNzgwMjcwNjgyQHNzcy5wZ2gucGEudXM",
+			want: "2294297.1780270682@sss.pgh.pa.us",
 		},
 		{
-			name: "already-encoded token passes through",
-			in:   "MjI5NDI5Ny4xNzgwMjcwNjgyQHNzcy5wZ2gucGEudXM",
-			want: "MjI5NDI5Ny4xNzgwMjcwNjgyQHNzcy5wZ2gucGEudXM",
-		},
-		{
-			name: "gmail-style id with = and + is encoded, not mistaken for b64",
+			name: "gmail-style id with = and + is left intact",
 			in:   "CAFiTN-sF_J8NB3xjie7g=2-R5v9aLqEE5jrtF2dMmwPngd9RBg@mail.gmail.com",
-			want: "Q0FGaVROLXNGX0o4TkIzeGppZTdnPTItUjV2OWFMcUVFNWpydEYyZE1td1BuZ2Q5UkJnQG1haWwuZ21haWwuY29t",
+			want: "CAFiTN-sF_J8NB3xjie7g=2-R5v9aLqEE5jrtF2dMmwPngd9RBg@mail.gmail.com",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := normalizeMessageID(tt.in); got != tt.want {
 				t.Errorf("normalizeMessageID(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMessagePath(t *testing.T) {
+	tests := []struct {
+		name   string
+		arg    string
+		suffix string
+		want   string
+	}{
+		{
+			name: "plain id percent-encodes into one segment",
+			arg:  "<2294297.1780270682@sss.pgh.pa.us>",
+			want: "/messages/2294297.1780270682@sss.pgh.pa.us",
+		},
+		{
+			name: "a slash in the id escapes to %2F, keeping one segment",
+			arg:  "20040101/some.id@example.com",
+			want: "/messages/20040101%2Fsome.id@example.com",
+		},
+		{
+			name:   "suffix is appended after the encoded segment",
+			arg:    "a1@example.com",
+			suffix: "/thread",
+			want:   "/messages/a1@example.com/thread",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := messagePath(tt.arg, tt.suffix); got != tt.want {
+				t.Errorf("messagePath(%q, %q) = %q, want %q", tt.arg, tt.suffix, got, tt.want)
 			}
 		})
 	}
