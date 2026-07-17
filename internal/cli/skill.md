@@ -96,7 +96,7 @@ Start from whichever entity the question is about:
 | People who post | `horton senders --sort messages --dir desc` |
 | One person + recent messages | `horton senders get 42` |
 | Commits by path/author/major | `horton commits --path src/backend/access/ --major 16` |
-| One commit (+ files, releases) | `horton commits get <40-hex-sha>` |
+| One commit (+ files, releases) | `horton commits get <sha-or-prefix>` |
 | **The discussion behind a commit** | `horton commits thread <sha>` |
 | Attachments / parsed patch summary | `horton attachments`, `horton attachments patch 1234` |
 | Majors and releases | `horton versions` |
@@ -109,7 +109,8 @@ Common filters on the list commands: `--from` / `--to` (ISO-8601 bounds),
 `--limit` (server default 25, **max 100**), `--after` / `--before` (cursors).
 `search` adds `--sender`, `--committed`, `--path`, `--major`, `--sort`
 (`relevance` default, or `sent_at`). `commits` adds `--path`, `--author`,
-`--major`.
+`--major`. `commits get` takes a full 40-hex sha **or** any unambiguous prefix
+(≥ 4 hex, git-style); an ambiguous prefix errors and asks for more characters.
 
 For anything the CLI doesn't wrap, there's a GET escape hatch:
 
@@ -147,40 +148,22 @@ horton messages --limit 100 --after "$C" --json | jq -r '.data[].subject'
 
 ## Gotchas
 
-These are verified against a live server, and most of them will otherwise cost
-you a confused debugging detour:
+Verified against a live server. A few of the old traps here were API bugs that
+have since been fixed — collection rows now carry a hydrated `sender` object and
+`lists` array, `senders get` embeds the same full message shape as `search`, and
+bad values fail loudly (below) instead of silently. What remains:
 
-- **`messages` and `search` results have `sender: null` and `lists: []`.** Those
-  two collection endpoints don't preload the associations their serializer
-  renders, so the fields are always empty regardless of the underlying data.
-  `messages get` and `messages thread` *do* hydrate them. Use the always-present
-  `from_raw` (`"Tom Lane <tgl@sss.pgh.pa.us>"`) for attribution when scanning
-  results, or fetch the message individually if you need the structured sender.
-  This bites silently: `jq '.data[].sender.email'` prints a column of `null`
-  rather than erroring, which reads like "no senders in the archive."
-- **`senders get` embeds a slimmer message shape.** Its `.data.messages[]` carry
-  only `message_id`, `subject`, `sent_at`, `thread_id`, `has_attachment`, and
-  `date_estimated` — no `from_raw`, no `sender`. Don't reuse a `jq` filter across
-  it and `search`; the fields aren't the same.
-- **`commits get` requires the full 40-hex sha.** A short sha is rejected with
-  "The commit sha in the URL must be 40 hex characters." Get the full sha from
-  `horton commits --json` first.
-- **Bad values fail in three different ways — two of them silent.** This is the
-  biggest trap here, because a wrong query can look exactly like a real answer:
-  - *Loud, client-side:* enum flags validated by the CLI (`--dir` anywhere,
-    `--sort` on `senders`) print `must be one of: …`.
-  - *Loud, server-side but vague:* a malformed date or `--limit` over 100 returns
-    the catch-all `One or more request parameters are invalid.` — it won't say
-    which param. Check dates are ISO-8601 and `--limit` ≤ 100.
-  - *Silent:* `search --sort` is a **plain string flag**, not an enum — `--sort
-    banana` is accepted and the server quietly falls back to relevance order, so
-    you get plausible rows in the wrong order. Only `relevance` and `sent_at`
-    mean anything. Likewise a nonexistent `--major 99` returns an **empty table,
-    not an error**, which reads as "nothing landed" rather than "you typo'd."
-    Take major names from `horton versions` (`16`, `9.6`, `master`).
-
-  When a filtered query comes back empty, re-run it without the filter before
-  reporting "no results" — that distinguishes a real absence from a silent typo.
+- **Bad values now fail loudly — but confirm empty *filtered* results.** Enum
+  flags the CLI itself checks (`--dir`, `--sort` on `senders`) print `must be one
+  of: …` before any request. Server-side, a bad `--limit` (> 100), malformed
+  date (`--from`/`--to`), unknown `search --sort`, or nonexistent `--major` all
+  return a 422 error — no more silent fallback to relevance order or an empty
+  table masquerading as "nothing landed." For `--limit`, dates, and `--major`
+  the message names the param and its rule; for `search --sort` it's a terser
+  `Invalid value for enum` (the offending param rides in `details`). Take major
+  names from `horton versions` (`16`, `9.6`, `master`). Still: a *filtered* query
+  that returns empty is a real (valid) empty — re-run without the filter to tell
+  a genuine absence from an over-narrow one.
 - **`commits thread` writes its misses to stderr**: `no archived discussion
   found`, and `# unresolved ref (…)` for Message-Ids a commit trailer cites that
   aren't in the archive. A commit having no thread is normal and not an error —
@@ -196,7 +179,9 @@ you a confused debugging detour:
   landed in 17.0 *and* was backpatched to 16.4, so Horton lists it under 16 and
   `gucs 17 --changed-since 16` does **not** call it added. A hand-rolled
   `REL_16_0` vs `REL_17_0` source diff *does*. Neither is wrong — they answer
-  different questions ("new since 16.0" vs "new versus current 16.x"). For an
+  different questions ("new since 16.0" vs "new versus current 16.x"). The
+  catalog response reports which minor it was snapshotted from in
+  `data.server_version` (e.g. `"17.10 …"`), so cite that when it matters. For an
   upgrade audit, Horton's framing is usually the one you want, since you're
   upgrading from a patched 16, not from 16.0. Say which you mean when reporting.
 
