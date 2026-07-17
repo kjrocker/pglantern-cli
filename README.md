@@ -1,12 +1,8 @@
 # horton
 
-`gh`-style command-line client for the [Horton](https://codeberg.org/kehvyn/horton)
-mailing-list-archive JSON API (`/api/v1`).
+`gh`-style command-line client for [pgLantern](https://pglantern.com).
 
-It is deliberately a **dumb API client**: it checks required arguments and flag
-types, passes everything else through verbatim, and prints the server's error
-message when the API rejects a request. Domain validation (date formats,
-cursors, major names, bounds) lives on the server.
+A basic passthrough client that exists so that we don't have to `curl` the pgLantern endpoints directly.
 
 ## Install
 
@@ -14,15 +10,13 @@ cursors, major names, bounds) lives on the server.
 curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash
 ```
 
-Drops a prebuilt binary (Linux or macOS, amd64 or arm64) into `~/.local/bin`
-and changes no shell rc files — if that directory isn't on your `PATH`, the
-script prints the `export` line to add yourself. To install somewhere else:
+Downloads the release binary to `~/.local/bin`, but the destination can be overridden if you'd prefer:
 
 ```sh
 curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
 ```
 
-With Go 1.24+:
+If you already have Go (1.24+) globally configured:
 
 ```sh
 go install codeberg.org/kehvyn/horton-cli@latest
@@ -45,9 +39,9 @@ horton login --with-token < key    # scriptable
 horton login --host https://horton.example.com
 ```
 
-The key and host are stored in `~/.config/horton/config.json` (mode 0600).
-Overrides, highest first: `--api-key` / `--host` flags, then `HORTON_API_KEY` /
-`HORTON_HOST`, then the config file. `horton logout` deletes the file.
+The key and host are stored in `~/.config/horton/config.json`.
+
+The API key and the host can be passed per-command with `--api-key` / `--host` flags, injected into the environment with `HORTON_API_KEY` / `HORTON_HOST`, or just use the configuration file. `horton logout` deletes the file.
 
 ## Usage
 
@@ -71,19 +65,13 @@ horton activity src/backend/access/    # merged commit + thread activity
 horton imports --list pgsql-hackers
 ```
 
-Message commands take the raw Message-Id exactly as tables print it (a
-surrounding `<>` from a mail header is fine) — the CLI percent-encodes it into
-a single URL path segment for you.
-
-Every command renders a human table by default; add `--json` for the raw
-response body (indented on a terminal, compact through a pipe):
+Every command renders a table by default, but accepts a `--json` argument:
 
 ```sh
 horton messages --limit 3 --json | jq '.data[].subject'
 ```
 
-Paginated commands print the next-page cursor to **stderr** so tables stay
-pipe-clean:
+Paginated commands print the next-page cursor to **stderr**
 
 ```
 # next: --after g3QAAAAC...
@@ -96,8 +84,6 @@ horton api /search --param q=vacuum --param limit=5
 ```
 
 ## Shell completion
-
-Cobra generates completions:
 
 ```sh
 horton completion zsh > ~/.local/share/zsh/site-functions/_horton
