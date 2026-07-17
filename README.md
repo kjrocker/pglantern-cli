@@ -14,9 +14,9 @@ cursors, major names, bounds) lives on the server.
 curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash
 ```
 
-Drops a prebuilt Linux binary (amd64 or arm64) into `~/.local/bin` and changes
-no shell rc files — if that directory isn't on your `PATH`, the script prints
-the `export` line to add yourself. To install somewhere else:
+Drops a prebuilt binary (Linux or macOS, amd64 or arm64) into `~/.local/bin`
+and changes no shell rc files — if that directory isn't on your `PATH`, the
+script prints the `export` line to add yourself. To install somewhere else:
 
 ```sh
 curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
