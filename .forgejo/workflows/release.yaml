@@ -23,7 +23,4 @@ jobs:
           version: '~> v2'
           args: release --clean
         env:
-          # Forgejo Actions auto-injects GITHUB_TOKEN; blank it so GoReleaser
-          # doesn't see two tokens and bail out.
-          GITHUB_TOKEN: ""
           GITEA_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
