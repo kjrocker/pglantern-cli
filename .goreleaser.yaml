@@ -37,6 +37,9 @@ checksum:
   name_template: checksums.txt
 
 release:
+  # Overwrite an existing release for the tag instead of failing, so re-runs
+  # after a partial/failed release succeed.
+  mode: replace
   gitea:
     owner: kehvyn
     name: horton-cli
