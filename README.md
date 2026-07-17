@@ -10,7 +10,25 @@ cursors, major names, bounds) lives on the server.
 
 ## Install
 
-Requires [mise](https://mise.jdx.dev) (or Go 1.24+ directly):
+```sh
+curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash
+```
+
+Drops a prebuilt Linux binary (amd64 or arm64) into `~/.local/bin` and changes
+no shell rc files — if that directory isn't on your `PATH`, the script prints
+the `export` line to add yourself. To install somewhere else:
+
+```sh
+curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
+```
+
+With Go 1.24+:
+
+```sh
+go install codeberg.org/kehvyn/horton-cli@latest
+```
+
+Or from source, with [mise](https://mise.jdx.dev):
 
 ```sh
 mise install
@@ -54,8 +72,8 @@ horton imports --list pgsql-hackers
 ```
 
 Message commands take the raw Message-Id exactly as tables print it (a
-surrounding `<>` from a mail header is fine) — the CLI base64url-encodes it
-into the URL for you. A token copied from an API URL also works as-is.
+surrounding `<>` from a mail header is fine) — the CLI percent-encodes it into
+a single URL path segment for you.
 
 Every command renders a human table by default; add `--json` for the raw
 response body (indented on a terminal, compact through a pipe):
@@ -92,3 +110,7 @@ horton completion bash|fish|powershell   # likewise
 go test ./...
 go vet ./...
 ```
+
+## License
+
+[MIT](LICENSE)
