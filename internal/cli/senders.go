@@ -29,12 +29,12 @@ func newSendersCmd() *cobra.Command {
 				for _, s := range page.Data {
 					count, first, last := senderStatCells(s.Stats)
 					rows = append(rows, []string{
-						strconv.Itoa(s.ID), s.Email,
-						output.Truncate(s.DisplayName, 32), count, first, last,
+						strconv.Itoa(s.ID), output.Truncate(s.DisplayName, 32),
+						s.Email, count, first, last,
 					})
 				}
 				output.Table(os.Stdout,
-					[]string{"ID", "EMAIL", "NAME", "MESSAGES", "FIRST", "LAST"}, rows)
+					[]string{"ID", "NAME", "EMAIL", "MESSAGES", "FIRST", "LAST"}, rows)
 				output.CursorFooter(page.NextCursor)
 			})
 		},
@@ -54,7 +54,7 @@ func newSendersGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <id>",
 		Short: "Show one sender and their recent messages",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a sender id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.Atoi(args[0])
 			if err != nil {
@@ -66,8 +66,8 @@ func newSendersGetCmd() *cobra.Command {
 					count, first, last := senderStatCells(s.Stats)
 					output.Detail(os.Stdout, [][2]string{
 						{"Id", strconv.Itoa(s.ID)},
-						{"Email", s.Email},
 						{"Name", s.DisplayName},
+						{"Email", s.Email},
 						{"Messages", count},
 						{"First", first},
 						{"Last", last},

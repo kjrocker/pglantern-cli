@@ -12,7 +12,7 @@ func newSearchCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search <query>...",
 		Short: "Full-text search over messages",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  requireArgs("a search query"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd,
 				"sort", "sender", "committed", "path", "major",

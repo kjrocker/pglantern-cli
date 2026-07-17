@@ -12,7 +12,7 @@ func newActivityCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "activity <path>",
 		Short: "Merged commit + discussion activity for a source-tree path",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a source-tree path"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, "major", "limit", "after", "before")
 			q.Set("path", args[0])

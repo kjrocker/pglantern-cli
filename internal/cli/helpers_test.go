@@ -1,10 +1,53 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
 )
+
+func TestRequireArg(t *testing.T) {
+	newCmd := func() *cobra.Command {
+		return &cobra.Command{Use: "patch <id>", Args: requireArg("an attachment id")}
+	}
+
+	// Missing and extra arguments both fail with a message that names the
+	// argument and shows the usage line, not cobra's bare "accepts 1 arg(s)".
+	for _, args := range [][]string{{}, {"1", "2"}} {
+		err := newCmd().Args(newCmd(), args)
+		if err == nil {
+			t.Fatalf("args %v accepted, want error", args)
+		}
+		if !strings.Contains(err.Error(), "an attachment id") {
+			t.Errorf("args %v: message %q does not name the argument", args, err)
+		}
+		if !strings.Contains(err.Error(), "patch <id>") {
+			t.Errorf("args %v: message %q omits the usage line", args, err)
+		}
+	}
+
+	if err := newCmd().Args(newCmd(), []string{"1"}); err != nil {
+		t.Errorf("exactly one argument rejected: %v", err)
+	}
+}
+
+func TestRequireArgs(t *testing.T) {
+	cmd := &cobra.Command{Use: "search <query>...", Args: requireArgs("a search query")}
+
+	if err := cmd.Args(cmd, nil); err == nil {
+		t.Error("no arguments accepted, want error")
+	} else if !strings.Contains(err.Error(), "a search query") {
+		t.Errorf("message %q does not name the argument", err)
+	}
+
+	// One or more arguments are both fine for a multi-word query.
+	for _, args := range [][]string{{"vacuum"}, {"index", "only", "scan"}} {
+		if err := cmd.Args(cmd, args); err != nil {
+			t.Errorf("args %v rejected: %v", args, err)
+		}
+	}
+}
 
 func TestCollectQuery(t *testing.T) {
 	cmd := &cobra.Command{Use: "test"}

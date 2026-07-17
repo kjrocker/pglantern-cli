@@ -24,16 +24,27 @@ func messagePath(arg string, suffix string) string {
 	return "/messages/" + url.PathEscape(normalizeMessageID(arg)) + suffix
 }
 
+// senderDisplay renders the "From" column as "Name <email>". The thread and
+// single-message endpoints preload the sender, so we assemble that form from
+// its parts (display name + email); search doesn't preload it, so we fall back
+// to from_raw, which the archive already stores in the same "Name <email>"
+// form. A preloaded sender with no display name degrades to the bare email.
+func senderDisplay(m api.MessageSummary) string {
+	if m.Sender != nil && m.Sender.Email != "" {
+		if m.Sender.DisplayName != "" {
+			return fmt.Sprintf("%s <%s>", m.Sender.DisplayName, m.Sender.Email)
+		}
+		return m.Sender.Email
+	}
+	return m.FromRaw
+}
+
 func messageRows(msgs []api.MessageSummary) [][]string {
 	rows := make([][]string, 0, len(msgs))
 	for _, m := range msgs {
-		from := m.FromRaw
-		if m.Sender != nil && m.Sender.Email != "" {
-			from = m.Sender.Email
-		}
 		rows = append(rows, []string{
 			m.SentAt,
-			output.Truncate(from, 32),
+			output.Truncate(senderDisplay(m), 32),
 			output.Truncate(m.Subject, 64),
 			m.MessageID,
 		})
@@ -50,8 +61,8 @@ func commitRows(commits []api.CommitSummary) [][]string {
 	for _, c := range commits {
 		rows = append(rows, []string{
 			c.SHA,
+			output.Truncate(fmt.Sprintf("%s <%s>", c.AuthorName, c.AuthorEmail), 40),
 			c.CommittedAt,
-			output.Truncate(c.AuthorName, 24),
 			output.Truncate(c.Subject, 64),
 		})
 	}
@@ -92,7 +103,7 @@ func newMessagesGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <message-id>",
 		Short: "Show one message by Message-Id",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a message id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "")
 			return getRender(cmd, path, nil, func(item api.Item[api.MessageFull]) {
@@ -134,7 +145,7 @@ func newMessagesThreadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "thread <message-id>",
 		Short: "Show the whole thread containing a message",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a message id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "/thread")
 			return getRender(cmd, path, nil, func(page api.Page[api.MessageSummary]) {
@@ -148,7 +159,7 @@ func newMessagesCommitsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "commits <message-id>",
 		Short: "Show commits that landed from a message's thread",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a message id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "/commits")
 			return getRender(cmd, path, nil, func(page api.Page[api.CommitGroup]) {
@@ -173,7 +184,7 @@ func newMessagesRefsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "refs <message-id>",
 		Short: "Show references extracted from a message (shas, paths, CVEs, …)",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a message id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "/refs")
 			return getRender(cmd, path, nil, func(page api.Page[api.Ref]) {

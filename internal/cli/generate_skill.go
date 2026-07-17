@@ -25,7 +25,7 @@ func newGenerateSkillCmd() *cobra.Command {
 			"learn to drive this CLI. <location> may be a directory (SKILL.md is written\n" +
 			"inside it) or a path ending in .md (written verbatim). Parent directories\n" +
 			"are created as needed.",
-		Args: cobra.ExactArgs(1),
+		Args: requireArg("a target location"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dest := args[0]
 			if !strings.HasSuffix(dest, ".md") {

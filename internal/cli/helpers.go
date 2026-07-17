@@ -67,6 +67,33 @@ func collectQuery(cmd *cobra.Command, names ...string) url.Values {
 	return q
 }
 
+// requireArg validates that a command received exactly one positional
+// argument, naming what's missing (e.g. "an attachment id") and echoing the
+// usage line, instead of cobra's bare "accepts 1 arg(s), received 0".
+func requireArg(what string) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return argError(cmd, what)
+		}
+		return nil
+	}
+}
+
+// requireArgs is requireArg for commands that accept one or more arguments,
+// such as a multi-word search query.
+func requireArgs(what string) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return argError(cmd, what)
+		}
+		return nil
+	}
+}
+
+func argError(cmd *cobra.Command, what string) error {
+	return fmt.Errorf("%s requires %s\n\nUsage:\n  %s", cmd.CommandPath(), what, cmd.UseLine())
+}
+
 // enumFlag is a pflag.Value that rejects values outside its allowed set at
 // parse time.
 type enumFlag struct {

@@ -18,7 +18,7 @@ func newCommitsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, "path", "author", "major", "from", "to", "limit", "after", "before")
 			return getRender(cmd, "/commits", q, func(page api.Page[api.CommitSummary]) {
-				output.Table(os.Stdout, []string{"SHA", "COMMITTED AT", "AUTHOR", "SUBJECT"},
+				output.Table(os.Stdout, []string{"SHA", "AUTHOR", "COMMITTED AT", "SUBJECT"},
 					commitRows(page.Data))
 				output.CursorFooter(page.NextCursor)
 			})
@@ -41,7 +41,7 @@ func newCommitsGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <sha>",
 		Short: "Show one commit (full 40-hex sha)",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a commit sha"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := "/commits/" + url.PathEscape(args[0])
 			return getRender(cmd, path, nil, func(item api.Item[api.CommitFull]) {
@@ -87,7 +87,7 @@ func newCommitsThreadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "thread <sha>",
 		Short: "Show the mailing-list discussion behind a commit",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a commit sha"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := "/commits/" + url.PathEscape(args[0]) + "/thread"
 			return getRender(cmd, path, nil, func(item api.Item[api.CommitThread]) {
