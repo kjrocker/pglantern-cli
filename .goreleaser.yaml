@@ -2,6 +2,10 @@ version: 2
 
 project_name: horton
 
+# Forgejo runners inject a GITHUB_TOKEN alongside our GITEA_TOKEN; force
+# GoReleaser to use the Gitea one instead of erroring on multiple tokens.
+force_token: gitea
+
 gitea_urls:
   api: https://codeberg.org/api/v1/
   download: https://codeberg.org
