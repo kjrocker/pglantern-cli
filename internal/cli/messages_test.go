@@ -1,6 +1,49 @@
 package cli
 
-import "testing"
+import (
+	"testing"
+
+	"codeberg.org/kehvyn/horton-cli/internal/api"
+)
+
+func TestSenderDisplay(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  api.MessageSummary
+		want string
+	}{
+		{
+			name: "preloaded sender assembles Name <email>",
+			msg: api.MessageSummary{
+				FromRaw: "tgl@sss.pgh.pa.us",
+				Sender:  &api.Sender{Email: "tgl@sss.pgh.pa.us", DisplayName: "Tom Lane"},
+			},
+			want: "Tom Lane <tgl@sss.pgh.pa.us>",
+		},
+		{
+			name: "preloaded sender with no display name degrades to email",
+			msg: api.MessageSummary{
+				FromRaw: "Tom Lane <tgl@sss.pgh.pa.us>",
+				Sender:  &api.Sender{Email: "tgl@sss.pgh.pa.us"},
+			},
+			want: "tgl@sss.pgh.pa.us",
+		},
+		{
+			name: "no preloaded sender falls back to from_raw",
+			msg: api.MessageSummary{
+				FromRaw: "Tom Lane <tgl@sss.pgh.pa.us>",
+			},
+			want: "Tom Lane <tgl@sss.pgh.pa.us>",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := senderDisplay(tt.msg); got != tt.want {
+				t.Errorf("senderDisplay() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestNormalizeMessageID(t *testing.T) {
 	tests := []struct {

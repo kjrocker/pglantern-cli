@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -9,14 +10,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// threadStarterCell renders the "who kicked it off" column: display name if we
-// have one, else the raw email, else a dash for threads with no ingested start.
+// threadStarterCell renders the "who kicked it off" column as "Name <email>",
+// matching the From column elsewhere: both parts if we have them, else the bare
+// email, else a dash for threads with no ingested start.
 func threadStarterCell(s *api.ThreadStarter) string {
 	if s == nil || s.Sender == nil {
 		return "-"
 	}
-	if s.Sender.DisplayName != "" {
-		return s.Sender.DisplayName
+	if s.Sender.DisplayName != "" && s.Sender.Email != "" {
+		return fmt.Sprintf("%s <%s>", s.Sender.DisplayName, s.Sender.Email)
 	}
 	return output.OrDash(&s.Sender.Email)
 }
@@ -40,14 +42,14 @@ func newThreadsCmd() *cobra.Command {
 				for _, t := range page.Data {
 					rows = append(rows, []string{
 						output.Truncate(t.Subject, 48),
+						output.Truncate(threadStarterCell(t.Starter), 32),
 						strconv.Itoa(t.MessageCount),
 						t.LastActivityAt,
-						output.Truncate(threadStarterCell(t.Starter), 32),
 						threadMessageIDCell(t.Starter),
 					})
 				}
 				output.Table(os.Stdout,
-					[]string{"SUBJECT", "MESSAGES", "LAST ACTIVITY", "STARTER", "MESSAGE-ID"}, rows)
+					[]string{"SUBJECT", "STARTER", "MESSAGES", "LAST ACTIVITY", "MESSAGE-ID"}, rows)
 				output.CursorFooter(page.NextCursor)
 			})
 		},

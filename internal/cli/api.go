@@ -16,7 +16,7 @@ func newAPICmd() *cobra.Command {
 		Short: "GET any /api/v1 path and print the raw JSON",
 		Long: "Escape hatch for endpoints or params this CLI doesn't wrap. The path is\n" +
 			"relative to /api/v1 (e.g. `horton api /messages --param limit=3`).",
-		Args: cobra.ExactArgs(1),
+		Args: requireArg("an API path"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 			if !strings.HasPrefix(path, "/") {

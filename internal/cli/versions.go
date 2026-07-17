@@ -40,7 +40,7 @@ func newVersionsDocsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "docs <major>",
 		Short: "Show a major's documentation table of contents",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a postgres major version"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := "/versions/" + url.PathEscape(args[0]) + "/docs"
 			return getRender(cmd, path, nil, func(item api.Item[api.DocPages]) {
@@ -78,7 +78,7 @@ func newVersionsGucsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gucs <major>",
 		Short: "Show a major's GUC catalog, or its diff against another major",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireArg("a postgres major version"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := "/versions/" + url.PathEscape(args[0]) + "/gucs"
 			q := collectQuery(cmd, "changed-since")
