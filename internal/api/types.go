@@ -228,6 +228,18 @@ type GucDiff struct {
 	ContextChanged []GucChange `json:"context_changed"`
 }
 
+type DocPage struct {
+	Title      *string `json:"title"`
+	PageSlug   string  `json:"page_slug"`
+	SgmlSource string  `json:"sgml_source"`
+	URL        string  `json:"url"`
+}
+
+type DocPages struct {
+	Major string    `json:"major"`
+	Docs  []DocPage `json:"docs"`
+}
+
 type ImportFile struct {
 	Basename   string `json:"basename"`
 	Path       string `json:"path"`

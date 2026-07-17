@@ -32,7 +32,30 @@ func newVersionsCmd() *cobra.Command {
 		},
 	}
 	cmd.AddCommand(newVersionsGucsCmd())
+	cmd.AddCommand(newVersionsDocsCmd())
 	return cmd
+}
+
+func newVersionsDocsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "docs <major>",
+		Short: "Show a major's documentation table of contents",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := "/versions/" + url.PathEscape(args[0]) + "/docs"
+			return getRender(cmd, path, nil, func(item api.Item[api.DocPages]) {
+				rows := make([][]string, 0, len(item.Data.Docs))
+				for _, d := range item.Data.Docs {
+					title := d.SgmlSource
+					if d.Title != nil {
+						title = *d.Title
+					}
+					rows = append(rows, []string{title, d.SgmlSource, d.URL})
+				}
+				output.Table(os.Stdout, []string{"TITLE", "SOURCE", "URL"}, rows)
+			})
+		},
+	}
 }
 
 func gucChangeRows(changes []api.GucChange) [][]string {
