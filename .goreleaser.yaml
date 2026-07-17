@@ -1,0 +1,37 @@
+version: 2
+
+project_name: horton
+
+gitea_urls:
+  api: https://codeberg.org/api/v1/
+  download: https://codeberg.org
+
+builds:
+  - id: horton
+    main: .
+    binary: horton
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X codeberg.org/kehvyn/horton-cli/internal/cli.version={{ .Version }}
+
+archives:
+  - id: horton
+    formats: [tar.gz]
+    name_template: horton_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  gitea:
+    owner: kehvyn
+    name: horton-cli

@@ -7,7 +7,7 @@ package cli
 
 import "github.com/spf13/cobra"
 
-var version = "0.1.0"
+var version = "dev"
 
 // NewRootCmd builds the root command with all subcommands attached.
 func NewRootCmd() *cobra.Command {
