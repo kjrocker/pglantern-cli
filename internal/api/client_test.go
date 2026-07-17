@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -15,6 +16,7 @@ func TestDecodeError(t *testing.T) {
 		body    string
 		code    string
 		message string
+		details string
 	}{
 		{
 			name:    "server envelope",
@@ -29,6 +31,15 @@ func TestDecodeError(t *testing.T) {
 			body:    `{"error":{"code":"invalid_params","message":"limit is out of range","details":{"limit":"max 100"}}}`,
 			code:    "invalid_params",
 			message: "limit is out of range",
+			details: `{"limit":"max 100"}`,
+		},
+		{
+			name:    "enum shape details",
+			status:  422,
+			body:    `{"error":{"code":"invalid_params","message":"Invalid value for enum","details":{"errors":[{"path":"/sort","reason":"Invalid value for enum"}]}}}`,
+			code:    "invalid_params",
+			message: "Invalid value for enum",
+			details: `{"errors":[{"path":"/sort","reason":"Invalid value for enum"}]}`,
 		},
 		{
 			name:   "non-envelope body",
@@ -47,6 +58,9 @@ func TestDecodeError(t *testing.T) {
 				t.Errorf("got %+v, want status=%d code=%q message=%q",
 					err, tt.status, tt.code, tt.message)
 			}
+			if string(err.Details) != tt.details {
+				t.Errorf("details = %q, want %q", err.Details, tt.details)
+			}
 		})
 	}
 }
@@ -59,6 +73,24 @@ func TestErrorString(t *testing.T) {
 	bare := &Error{Status: 502}
 	if got := bare.Error(); got != "HTTP 502" {
 		t.Errorf("got %q", got)
+	}
+
+	// Enum shape (schema-validated): the terse message doesn't name the param,
+	// so Error() appends it from details.errors[].path.
+	enum := DecodeError(422, []byte(`{"error":{"code":"invalid_params","message":"Invalid value for enum","details":{"errors":[{"path":"/sort","reason":"Invalid value for enum"}]}}}`))
+	if got := enum.Error(); got != "Invalid value for enum (parameter: sort)" {
+		t.Errorf("enum shape: got %q", got)
+	}
+
+	// Domain shape (FallbackController): the message already quotes the param,
+	// so Error() must not duplicate it with a "(parameter: ...)" suffix.
+	domain := DecodeError(422, []byte(`{"error":{"code":"invalid_params","message":"The 'limit' parameter must be an integer between 1 and 100.","details":{"param":"limit"}}}`))
+	got := domain.Error()
+	if strings.Contains(got, "(parameter:") {
+		t.Errorf("domain shape: got %q, want no duplicated param suffix", got)
+	}
+	if got != "The 'limit' parameter must be an integer between 1 and 100." {
+		t.Errorf("domain shape: got %q", got)
 	}
 }
 

@@ -1,6 +1,10 @@
 # Note: surface `error.details` (and give `search --sort` a client-side enum)
 
-Status: **TODO** — deferred CLI-side follow-ups from the API's GOTCHAS cleanup.
+Status: **DONE** — both follow-ups landed. `DecodeError` now captures
+`error.details` and `Error.Error()` appends `(parameter: X)` for the terse
+schema-shaped 422s (`internal/api/client.go`), and `search --sort` validates
+`relevance`/`sent_at` at parse time via `addEnumFlag` (`internal/cli/search.go`).
+Kept below as the rationale record.
 
 The server side of the pgsql-archive "rough edges" work landed in the `pgml-api`
 repo (see its `GOTCHAS.md`): collection endpoints now hydrate `sender`/`lists`,
