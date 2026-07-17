@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
@@ -12,19 +11,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// normalizeMessageID turns a raw Message-Id into the base64url path token the
-// API routes on. A raw Message-Id always contains "@" (and may arrive wrapped
-// in the <> from a mail header), which base64url tokens never do, so the two
-// forms are unambiguous: anything without "@" is passed through as an
-// already-encoded token.
+// normalizeMessageID strips the optional <> a mail header wraps a Message-Id
+// in; the archive stores (and routes on) the bracket-stripped RFC id.
 func normalizeMessageID(arg string) string {
-	id := strings.Trim(arg, "<>")
-	if !strings.Contains(id, "@") {
-		return arg
-	}
-	return base64.RawURLEncoding.EncodeToString([]byte(id))
+	return strings.Trim(arg, "<>")
 }
 
+// messagePath builds a /messages path, percent-encoding the raw Message-Id into
+// a single path segment (url.PathEscape turns "/" into "%2F"), which the API
+// percent-decodes back to the raw id.
 func messagePath(arg string, suffix string) string {
 	return "/messages/" + url.PathEscape(normalizeMessageID(arg)) + suffix
 }
