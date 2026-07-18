@@ -3,8 +3,6 @@ package cli
 import (
 	"strings"
 
-	"codeberg.org/kehvyn/horton-cli/internal/api"
-	"codeberg.org/kehvyn/horton-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -18,10 +16,7 @@ func newSearchCmd() *cobra.Command {
 				"sort", "sender", "committed", "path", "major",
 				"from", "to", "limit", "after", "before")
 			q.Set("q", strings.Join(args, " "))
-			return getRender(cmd, "/search", q, func(page api.Page[api.MessageSummary]) {
-				messageTable(page.Data)
-				output.CursorFooter(page.NextCursor)
-			})
+			return renderMessagePage(cmd, "/search", q, true)
 		},
 	}
 	addEnumFlag(cmd, "sort", "sort order", "relevance", "sent_at")
@@ -34,5 +29,6 @@ func newSearchCmd() *cobra.Command {
 	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
 	cmd.Flags().String("after", "", "page cursor")
 	cmd.Flags().String("before", "", "page cursor")
+	addFullFlag(cmd)
 	return cmd
 }
