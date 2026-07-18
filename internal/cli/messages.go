@@ -56,6 +56,75 @@ func messageTable(msgs []api.MessageSummary) {
 	output.Table(os.Stdout, []string{"SENT AT", "FROM", "SUBJECT", "MESSAGE-ID"}, messageRows(msgs))
 }
 
+// messageDetail renders one full message: headers, attachment table, body. Used
+// by `messages get` and by --full on the collection commands, so a full row
+// reads identically however you fetched it — mirroring the server's guarantee
+// that both come from the same shape.
+func messageDetail(m api.MessageFull) {
+	pairs := [][2]string{
+		{"Message-Id", m.MessageID},
+		{"Subject", m.Subject},
+		{"From", m.FromRaw},
+		{"To", m.ToRaw},
+	}
+	if m.CcRaw != "" {
+		pairs = append(pairs, [2]string{"Cc", m.CcRaw})
+	}
+	pairs = append(pairs,
+		[2]string{"Sent at", m.SentAt},
+		[2]string{"Thread", m.ThreadID},
+	)
+	output.Detail(os.Stdout, pairs)
+	if len(m.Attachments) > 0 {
+		fmt.Println()
+		rows := make([][]string, 0, len(m.Attachments))
+		for _, a := range m.Attachments {
+			patch := ""
+			if a.IsPatch {
+				patch = "patch"
+			}
+			rows = append(rows, []string{fmt.Sprint(a.ID), a.Filename, a.ContentType, patch})
+		}
+		output.Table(os.Stdout, []string{"ATTACHMENT", "FILENAME", "TYPE", ""}, rows)
+	}
+	fmt.Println()
+	fmt.Println(m.BodyText)
+}
+
+// renderMessagePage fetches a message collection and renders it: the summary
+// table by default, or a `messages get`-style block per row under --full. The
+// branch is here rather than in the render callback because the two modes
+// decode into different types.
+func renderMessagePage(cmd *cobra.Command, path string, q url.Values, footer bool) error {
+	if full, _ := cmd.Flags().GetBool("full"); full {
+		q.Set("response", "full")
+		return getRender(cmd, path, q, func(page api.Page[api.MessageFull]) {
+			for i, m := range page.Data {
+				if i > 0 {
+					fmt.Println()
+				}
+				messageDetail(m)
+			}
+			if footer {
+				output.CursorFooter(page.NextCursor)
+			}
+		})
+	}
+	return getRender(cmd, path, q, func(page api.Page[api.MessageSummary]) {
+		messageTable(page.Data)
+		if footer {
+			output.CursorFooter(page.NextCursor)
+		}
+	})
+}
+
+// addFullFlag registers --full on a message collection command. It maps to the
+// server's `response=full`, not a `full=` param, so it can't ride collectQuery.
+func addFullFlag(cmd *cobra.Command) {
+	cmd.Flags().Bool("full", false,
+		"return full message rows (body_text, attachments) instead of summaries")
+}
+
 func commitRows(commits []api.CommitSummary) [][]string {
 	rows := make([][]string, 0, len(commits))
 	for _, c := range commits {
@@ -86,10 +155,7 @@ func newMessagesCmd() *cobra.Command {
 			for _, id := range ids {
 				q.Add("ids[]", normalizeMessageID(id))
 			}
-			return getRender(cmd, "/messages", q, func(page api.Page[api.MessageSummary]) {
-				messageTable(page.Data)
-				output.CursorFooter(page.NextCursor)
-			})
+			return renderMessagePage(cmd, "/messages", q, true)
 		},
 	}
 	cmd.Flags().String("list", "", "restrict to one mailing list by name")
@@ -100,6 +166,7 @@ func newMessagesCmd() *cobra.Command {
 	cmd.Flags().String("after", "", "page cursor")
 	cmd.Flags().String("before", "", "page cursor")
 	addIDFlag(cmd, "fetch exactly this Message-Id")
+	addFullFlag(cmd)
 
 	cmd.AddCommand(
 		newMessagesGetCmd(),
@@ -118,52 +185,24 @@ func newMessagesGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "")
 			return getRender(cmd, path, nil, func(item api.Item[api.MessageFull]) {
-				m := item.Data
-				pairs := [][2]string{
-					{"Message-Id", m.MessageID},
-					{"Subject", m.Subject},
-					{"From", m.FromRaw},
-					{"To", m.ToRaw},
-				}
-				if m.CcRaw != "" {
-					pairs = append(pairs, [2]string{"Cc", m.CcRaw})
-				}
-				pairs = append(pairs,
-					[2]string{"Sent at", m.SentAt},
-					[2]string{"Thread", m.ThreadID},
-				)
-				output.Detail(os.Stdout, pairs)
-				if len(m.Attachments) > 0 {
-					fmt.Println()
-					rows := make([][]string, 0, len(m.Attachments))
-					for _, a := range m.Attachments {
-						patch := ""
-						if a.IsPatch {
-							patch = "patch"
-						}
-						rows = append(rows, []string{fmt.Sprint(a.ID), a.Filename, a.ContentType, patch})
-					}
-					output.Table(os.Stdout, []string{"ATTACHMENT", "FILENAME", "TYPE", ""}, rows)
-				}
-				fmt.Println()
-				fmt.Println(m.BodyText)
+				messageDetail(item.Data)
 			})
 		},
 	}
 }
 
 func newMessagesThreadCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "thread <message-id>",
 		Short: "Show the whole thread containing a message",
 		Args:  requireArg("a message id"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "/thread")
-			return getRender(cmd, path, nil, func(page api.Page[api.MessageSummary]) {
-				messageTable(page.Data)
-			})
+			return renderMessagePage(cmd, path, url.Values{}, false)
 		},
 	}
+	addFullFlag(cmd)
+	return cmd
 }
 
 func newMessagesCommitsCmd() *cobra.Command {

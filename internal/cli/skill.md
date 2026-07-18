@@ -88,6 +88,7 @@ Start from whichever entity the question is about:
 | What lists exist? | `horton lists` |
 | Recent/filtered messages | `horton messages --list pgsql-hackers --limit 10` |
 | One message (+ body, attachments) | `horton messages get '<message-id>'` |
+| Many messages with bodies, one request | `horton messages --full --id -` |
 | The whole thread around it | `horton messages thread '<message-id>'` |
 | Commits that landed from its thread | `horton messages commits '<message-id>'` |
 | Refs it cites (shas, paths, CVEs) | `horton messages refs '<message-id>'` |
@@ -170,7 +171,13 @@ Constraints:
   locally, and the result isn't paginated (both cursors are null).
 - Filters and `--sort`/`--dir` still apply, ANDed with the id set.
 - Ids that don't exist are silently dropped — you get the subset that does, not
-  a 404. A short result means some ids missed, not an error.
+  a 404. A short result means some ids missed, not an error. Because misses drop
+  out, a positional zip is only safe when the count came back as you sent it;
+  otherwise join on `.message_id` / `.sha` / `.id`.
+- **Results come back in the order you supplied the ids**, so you can zip the
+  output against your input. Passing `--sort`/`--dir` overrides that and sorts
+  normally.
+- `messages --id` accepts `--full`, so one request gets you bodies (see below).
 
 ## Gotchas
 
@@ -250,6 +257,36 @@ threads into one time-ordered feed, each row tagged `kind: commit|message`:
 ```sh
 horton activity src/backend/access/ --major 17 --limit 50 --json \
   | jq -r '.data[] | "\(.activity_at)\t\(.kind)\t\(.subject)"'
+```
+
+**"Read the opening post of the busiest threads"** — sort threads by size, pull
+each thread's starter Message-Id, pipe the ids in with `--full`. Two commands,
+one request each; the bodies come back in the order the ids went in:
+
+```sh
+horton threads --sort messages --dir desc --limit 5 --json \
+  | jq -r '.data[] | select(.starter.message_id) | .starter.message_id' \
+  | horton messages --full --id - --json \
+  | jq -r '.data[] | "=== \(.subject)\n\(.sender.email)\t\(.sent_at)\n\n\(.body_text)\n"'
+```
+
+`--full` asks for the single-message shape (`body_text`, `attachments`) on every
+collection row, so the rows are identical to what `messages get` returns — there
+is no reason to loop. It works on `messages`, `search`, and `messages thread`.
+Without `--json` it prints each message as a `messages get`-style block instead
+of the summary table.
+
+The `select(.starter.message_id)` guard matters: threads whose opening message
+was never ingested have a null starter, and an empty id would otherwise become a
+malformed request.
+
+Drop `--full` when the summary fields are enough — the payload is much smaller:
+
+```sh
+horton threads --sort messages --dir desc --limit 20 --json \
+  | jq -r '.data[] | select(.starter.message_id) | .starter.message_id' \
+  | horton messages --id - --json \
+  | jq -r '.data[] | "\(.sent_at)\t\(.sender.email)\t\(.subject)"'
 ```
 
 ## Troubleshooting
