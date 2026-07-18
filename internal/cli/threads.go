@@ -36,25 +36,28 @@ func newThreadsCmd() *cobra.Command {
 		Short: "Browse discussion threads across the lists",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := collectQuery(cmd, "q", "from", "to", "limit", "after", "before")
+			q := collectQuery(cmd, "q", "sort", "dir", "from", "to", "limit", "after", "before")
 			return getRender(cmd, "/threads", q, func(page api.Page[api.ThreadSummary]) {
 				rows := make([][]string, 0, len(page.Data))
 				for _, t := range page.Data {
 					rows = append(rows, []string{
-						output.Truncate(t.Subject, 48),
+						output.Truncate(t.Subject, 40),
 						output.Truncate(threadStarterCell(t.Starter), 32),
 						strconv.Itoa(t.MessageCount),
+						output.OrDash(&t.StartedAt),
 						t.LastActivityAt,
 						threadMessageIDCell(t.Starter),
 					})
 				}
 				output.Table(os.Stdout,
-					[]string{"SUBJECT", "STARTER", "MESSAGES", "LAST ACTIVITY", "MESSAGE-ID"}, rows)
+					[]string{"SUBJECT", "STARTER", "MESSAGES", "FIRST", "LAST ACTIVITY", "MESSAGE-ID"}, rows)
 				output.CursorFooter(page.NextCursor)
 			})
 		},
 	}
 	cmd.Flags().String("q", "", "substring on subject or full-text over member messages")
+	addEnumFlag(cmd, "sort", "sort key", "messages", "first", "last")
+	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	cmd.Flags().String("from", "", "only threads active on/after this date (ISO-8601)")
 	cmd.Flags().String("to", "", "only threads active on/before this date (ISO-8601)")
 	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")

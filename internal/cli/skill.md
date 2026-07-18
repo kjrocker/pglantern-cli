@@ -93,6 +93,7 @@ Start from whichever entity the question is about:
 | Refs it cites (shas, paths, CVEs) | `horton messages refs '<message-id>'` |
 | Full-text search | `horton search vacuum full --committed --major 17` |
 | Discussion threads, newest activity | `horton threads --q vacuum --from 2024-01-01` |
+| Busiest threads first | `horton threads --sort messages --dir desc` |
 | People who post | `horton senders --sort messages --dir desc` |
 | One person + recent messages | `horton senders get 42` |
 | Commits by path/author/major | `horton commits --path src/backend/access/ --major 16` |
@@ -107,7 +108,9 @@ Start from whichever entity the question is about:
 
 Common filters on the list commands: `--from` / `--to` (ISO-8601 bounds),
 `--limit` (server default 25, **max 100**), `--after` / `--before` (cursors).
-`search` adds `--sender`, `--committed`, `--path`, `--major`, `--sort`
+`threads` and `senders` share a sort vocabulary: `--sort messages|first|last`
+with `--dir asc|desc` (server default `last`/`desc`; leave both unset to keep
+it). `search` adds `--sender`, `--committed`, `--path`, `--major`, `--sort`
 (`relevance` default, or `sent_at`). `commits` adds `--path`, `--author`,
 `--major`. `commits get` takes a full 40-hex sha **or** any unambiguous prefix
 (≥ 4 hex, git-style); an ambiguous prefix errors and asks for more characters.
@@ -154,8 +157,9 @@ have since been fixed — collection rows now carry a hydrated `sender` object a
 bad values fail loudly (below) instead of silently. What remains:
 
 - **Bad values now fail loudly — but confirm empty *filtered* results.** Enum
-  flags the CLI itself checks (`--dir`, `--sort` on `senders`) print `must be one
-  of: …` before any request. Server-side, a bad `--limit` (> 100), malformed
+  flags the CLI itself checks (`--dir`, `--sort` on `threads` and `senders`)
+  print `must be one of: …` before any request. Server-side, a bad `--limit`
+  (> 100), malformed
   date (`--from`/`--to`), unknown `search --sort`, or nonexistent `--major` all
   return a 422 error — no more silent fallback to relevance order or an empty
   table masquerading as "nothing landed." For `--limit`, dates, and `--major`

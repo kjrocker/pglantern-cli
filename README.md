@@ -54,6 +54,7 @@ horton search vacuum full --committed --major 17
 horton senders --sort messages --dir desc
 horton senders get 42
 horton threads --q vacuum --from 2024-01-01   # discussion threads, newest activity first
+horton threads --sort messages --dir desc     # busiest threads first
 horton attachments patch 1234          # parsed patch summary
 horton commits --path src/backend/access/ --major 16
 horton commits get <sha>               # full 40-hex sha

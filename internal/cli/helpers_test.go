@@ -109,6 +109,20 @@ func TestSearchSortEnum(t *testing.T) {
 	}
 }
 
+func TestThreadsSortEnum(t *testing.T) {
+	// A known-bad --sort fails at parse time, before any HTTP call.
+	if err := newThreadsCmd().Flags().Parse([]string{"--sort", "banana"}); err == nil {
+		t.Error("invalid --sort accepted")
+	}
+	if err := newThreadsCmd().Flags().Parse([]string{"--dir", "sideways"}); err == nil {
+		t.Error("invalid --dir accepted")
+	}
+	// Valid values parse cleanly.
+	if err := newThreadsCmd().Flags().Parse([]string{"--sort", "messages", "--dir", "desc"}); err != nil {
+		t.Errorf("valid sort flags rejected: %v", err)
+	}
+}
+
 func TestIntFlagRejectsGarbage(t *testing.T) {
 	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().Int("limit", 0, "")
