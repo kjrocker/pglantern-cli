@@ -23,7 +23,19 @@ func newSendersCmd() *cobra.Command {
 		Short: "Browse people who have posted to the lists",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := rejectPaginationWithIDs(cmd); err != nil {
+				return err
+			}
 			q := collectQuery(cmd, "q", "sort", "dir", "limit", "after", "before")
+			ids, err := collectIDs(cmd, cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			// Passed through unchecked: the server drops non-integers silently,
+			// and erroring here would break subset semantics on a piped list.
+			for _, id := range ids {
+				q.Add("ids[]", id)
+			}
 			return getRender(cmd, "/senders", q, func(page api.Page[api.SenderSummary]) {
 				rows := make([][]string, 0, len(page.Data))
 				for _, s := range page.Data {
@@ -45,6 +57,7 @@ func newSendersCmd() *cobra.Command {
 	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
 	cmd.Flags().String("after", "", "page cursor")
 	cmd.Flags().String("before", "", "page cursor")
+	addIDFlag(cmd, "fetch exactly this sender id")
 
 	cmd.AddCommand(newSendersGetCmd())
 	return cmd

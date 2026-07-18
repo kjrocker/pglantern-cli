@@ -16,7 +16,19 @@ func newCommitsCmd() *cobra.Command {
 		Short: "Browse postgres commits linked to the archive",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := rejectPaginationWithIDs(cmd); err != nil {
+				return err
+			}
 			q := collectQuery(cmd, "path", "author", "major", "from", "to", "limit", "after", "before")
+			ids, err := collectIDs(cmd, cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			// Full shas only — unlike `commits get`, exact-ids mode does no
+			// prefix resolution, so a prefix just matches nothing.
+			for _, id := range ids {
+				q.Add("ids[]", id)
+			}
 			return getRender(cmd, "/commits", q, func(page api.Page[api.CommitSummary]) {
 				output.Table(os.Stdout, []string{"SHA", "AUTHOR", "COMMITTED AT", "SUBJECT"},
 					commitRows(page.Data))
@@ -32,6 +44,7 @@ func newCommitsCmd() *cobra.Command {
 	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
 	cmd.Flags().String("after", "", "page cursor")
 	cmd.Flags().String("before", "", "page cursor")
+	addIDFlag(cmd, "fetch exactly this commit (full 40-hex sha, no prefixes)")
 
 	cmd.AddCommand(newCommitsGetCmd(), newCommitsThreadCmd())
 	return cmd

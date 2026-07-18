@@ -122,6 +122,25 @@ func TestClientGet(t *testing.T) {
 	}
 }
 
+func TestClientGetExactIDs(t *testing.T) {
+	// Exact-ids mode goes over the wire as repeated `ids[]=` (percent-encoded),
+	// which is the only form Plug keeps as a list.
+	var gotIDs []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotIDs = r.URL.Query()["ids[]"]
+		w.Write([]byte(`{"data":[]}`))
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "sekrit").Get("/messages", url.Values{"ids[]": {"a@host", "b@host"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(gotIDs, ",") != "a@host,b@host" {
+		t.Errorf("ids[] = %v, want [a@host b@host]", gotIDs)
+	}
+}
+
 func TestClientGetErrorEnvelope(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

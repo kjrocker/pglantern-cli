@@ -149,6 +149,29 @@ C=$(horton messages --limit 100 --json | jq -r '.next_cursor')
 horton messages --limit 100 --after "$C" --json | jq -r '.data[].subject'
 ```
 
+### Exact ids
+
+To fetch a known set of records instead of a page, pass `--id` (repeatable).
+`-` reads newline-delimited ids from stdin, so one call's output feeds the next:
+
+```sh
+horton threads --json | jq -r '.data[].starter.message_id' | horton messages --id -
+horton search vacuum --json | jq -r '.data[].message_id' | horton messages --id -
+horton messages --id '<pinned@host>' --id -        # explicit ids merge with piped ones
+horton senders --id 1 --id 2 --sort messages --dir desc
+```
+
+Constraints:
+
+- Only `messages` (Message-Id), `commits` (**full 40-hex sha**, no prefix
+  resolution), and `senders` (integer id). `threads` and `lists` don't have it.
+- Max 100 ids, counted after de-duplication.
+- Not combinable with `--limit`, `--after`, or `--before` — the CLI rejects that
+  locally, and the result isn't paginated (both cursors are null).
+- Filters and `--sort`/`--dir` still apply, ANDed with the id set.
+- Ids that don't exist are silently dropped — you get the subset that does, not
+  a 404. A short result means some ids missed, not an error.
+
 ## Gotchas
 
 Verified against a live server. A few of the old traps here were API bugs that

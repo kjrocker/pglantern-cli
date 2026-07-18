@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strings"
@@ -65,6 +67,72 @@ func collectQuery(cmd *cobra.Command, names ...string) url.Values {
 		}
 	}
 	return q
+}
+
+// addIDFlag registers the --id flag that puts a collection command into the
+// server's exact-IDs mode. StringArray, not StringSlice: StringSlice splits on
+// commas, and the server never splits — `a,b` is one literal id there, so
+// splitting here would silently diverge.
+func addIDFlag(cmd *cobra.Command, usage string) {
+	cmd.Flags().StringArray("id", nil, usage+" (repeatable, max 100; `-` reads ids from stdin)")
+}
+
+// collectIDs reads the --id values in order, splicing newline-delimited ids
+// from stdin wherever the literal `-` appears, so a piped list and hand-typed
+// ids can be mixed. Entries are trimmed, blanks dropped, and duplicates removed
+// keeping first-seen order — mirroring what the server does to `ids[]`. Stdin
+// is consumed at most once however many `-` are passed.
+func collectIDs(cmd *cobra.Command, stdin io.Reader) ([]string, error) {
+	raw, err := cmd.Flags().GetStringArray("id")
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	seen := map[string]bool{}
+	add := func(id string) {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			return
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+
+	readStdin := false
+	for _, entry := range raw {
+		if entry != "-" {
+			add(entry)
+			continue
+		}
+		if readStdin {
+			continue
+		}
+		readStdin = true
+		scanner := bufio.NewScanner(stdin)
+		for scanner.Scan() {
+			add(scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			return nil, fmt.Errorf("reading ids from stdin: %w", err)
+		}
+	}
+	return ids, nil
+}
+
+// rejectPaginationWithIDs enforces the server's rule that exact-IDs mode is not
+// paginated, locally and before any HTTP round-trip. It names all three flags
+// rather than the one that tripped, so the user learns the whole rule at once.
+func rejectPaginationWithIDs(cmd *cobra.Command) error {
+	if !cmd.Flags().Changed("id") {
+		return nil
+	}
+	for _, name := range []string{"limit", "after", "before"} {
+		if cmd.Flags().Changed(name) {
+			return fmt.Errorf("--id cannot be combined with --limit, --after, or --before")
+		}
+	}
+	return nil
 }
 
 // requireArg validates that a command received exactly one positional
