@@ -123,6 +123,173 @@ func TestThreadsSortEnum(t *testing.T) {
 	}
 }
 
+// idCmd is a bare command carrying the flags exact-ids mode interacts with.
+func idCmd() *cobra.Command {
+	cmd := &cobra.Command{Use: "test"}
+	cmd.Flags().Int("limit", 0, "")
+	cmd.Flags().String("after", "", "")
+	cmd.Flags().String("before", "", "")
+	cmd.Flags().String("sort", "", "")
+	cmd.Flags().String("list", "", "")
+	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
+	addIDFlag(cmd, "an id")
+	return cmd
+}
+
+func TestCollectIDs(t *testing.T) {
+	tests := []struct {
+		name  string
+		args  []string
+		stdin string
+		want  []string
+	}{
+		{name: "no flag", want: nil},
+		{name: "repeated", args: []string{"--id", "a", "--id", "b"}, want: []string{"a", "b"}},
+		{
+			name:  "stdin sentinel",
+			args:  []string{"--id", "-"},
+			stdin: "a\nb\n",
+			want:  []string{"a", "b"},
+		},
+		{
+			// Explicit ids and piped ones merge, in flag order.
+			name:  "mixed explicit and stdin",
+			args:  []string{"--id", "pinned", "--id", "-"},
+			stdin: "a\nb\n",
+			want:  []string{"pinned", "a", "b"},
+		},
+		{
+			name:  "blanks trimmed and dropped",
+			args:  []string{"--id", "  a  ", "--id", "   "},
+			stdin: "",
+			want:  []string{"a"},
+		},
+		{
+			name:  "blank lines dropped",
+			args:  []string{"--id", "-"},
+			stdin: "a\n\n  \nb\n",
+			want:  []string{"a", "b"},
+		},
+		{
+			name:  "de-dupes keeping first-seen order",
+			args:  []string{"--id", "b", "--id", "a", "--id", "b"},
+			stdin: "a\nc\n",
+			want:  []string{"b", "a"},
+		},
+		{
+			// Stdin is consumed once, so a second `-` adds nothing.
+			name:  "repeated sentinel reads stdin once",
+			args:  []string{"--id", "-", "--id", "-"},
+			stdin: "a\nb\n",
+			want:  []string{"a", "b"},
+		},
+		{
+			// Commas are never split — the server treats "a,b" as one literal id.
+			name: "no comma splitting",
+			args: []string{"--id", "a,b"},
+			want: []string{"a,b"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := idCmd()
+			if err := cmd.Flags().Parse(tt.args); err != nil {
+				t.Fatal(err)
+			}
+			got, err := collectIDs(cmd, strings.NewReader(tt.stdin))
+			if err != nil {
+				t.Fatalf("collectIDs: %v", err)
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("got %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestCollectIDsMixedDedupe(t *testing.T) {
+	// A piped id that duplicates an explicit one is dropped, not appended again.
+	cmd := idCmd()
+	if err := cmd.Flags().Parse([]string{"--id", "a", "--id", "-"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := collectIDs(cmd, strings.NewReader("a\nb\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(got, ",") != "a,b" {
+		t.Errorf("got %v, want [a b]", got)
+	}
+}
+
+func TestRejectPaginationWithIDs(t *testing.T) {
+	// --id plus any pagination flag fails locally, before any HTTP call.
+	for _, args := range [][]string{
+		{"--id", "a", "--limit", "5"},
+		{"--id", "a", "--after", "cursor"},
+		{"--id", "a", "--before", "cursor"},
+	} {
+		cmd := idCmd()
+		if err := cmd.Flags().Parse(args); err != nil {
+			t.Fatal(err)
+		}
+		err := rejectPaginationWithIDs(cmd)
+		if err == nil {
+			t.Errorf("args %v accepted, want error", args)
+			continue
+		}
+		// The message names the whole rule, not just the flag that tripped it.
+		for _, want := range []string{"--limit", "--after", "--before"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("args %v: message %q omits %s", args, err, want)
+			}
+		}
+	}
+
+	// Sorts and filters stay legal in exact mode; pagination without --id is
+	// just normal paged mode.
+	for _, args := range [][]string{
+		{"--id", "a", "--sort", "messages", "--dir", "desc"},
+		{"--id", "a", "--list", "pgsql-hackers"},
+		{"--limit", "5", "--after", "cursor"},
+	} {
+		cmd := idCmd()
+		if err := cmd.Flags().Parse(args); err != nil {
+			t.Fatal(err)
+		}
+		if err := rejectPaginationWithIDs(cmd); err != nil {
+			t.Errorf("args %v rejected: %v", args, err)
+		}
+	}
+}
+
+func TestIDsQueryEncoding(t *testing.T) {
+	cmd := idCmd()
+	if err := cmd.Flags().Parse([]string{"--id", "<a@host>", "--id", "b@host"}); err != nil {
+		t.Fatal(err)
+	}
+	ids, err := collectIDs(cmd, strings.NewReader(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := collectQuery(cmd)
+	for _, id := range ids {
+		q.Add("ids[]", normalizeMessageID(id))
+	}
+
+	// Bracketed key (bare repeated `ids=` collapses under Plug) and one entry
+	// per id — not pflag's "[a b]" slice literal. Message-Id brackets stripped.
+	want := "ids%5B%5D=a%40host&ids%5B%5D=b%40host"
+	if got := q.Encode(); got != want {
+		t.Errorf("query = %q, want %q", got, want)
+	}
+}
+
 func TestIntFlagRejectsGarbage(t *testing.T) {
 	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().Int("limit", 0, "")

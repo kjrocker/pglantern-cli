@@ -72,6 +72,14 @@ Every command renders a table by default, but accepts a `--json` argument:
 horton messages --limit 3 --json | jq '.data[].subject'
 ```
 
+Fetch a known set of records instead of a page with `--id` (repeatable; `-`
+reads newline-delimited ids from stdin), on `messages`, `commits`, and
+`senders`:
+
+```sh
+horton threads --json | jq -r '.data[].starter.message_id' | horton messages --id -
+```
+
 Paginated commands print the next-page cursor to **stderr**
 
 ```
