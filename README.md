@@ -98,6 +98,21 @@ go test ./...
 go vet ./...
 ```
 
+## Releasing
+
+Maintainer-facing. Releases are built and published from a local machine — the Go build is `CGO_ENABLED=0`, so the darwin archives cross-compile from Linux.
+
+```sh
+mise install                  # go + goreleaser
+cp .env.example .env          # then fill in GITEA_TOKEN
+make release-dry              # build all four archives into dist/, publish nothing
+make release TAG=v0.3.0       # test, tag, push, publish to Codeberg
+```
+
+`GITEA_TOKEN` is a Codeberg access token scoped `write:repository`. The Makefile reads it from `.env`, which is gitignored — do not commit it, and do not put it in `.env.example`. `.env` is the source of truth and overrides any `GITEA_TOKEN` already exported in your shell.
+
+`make release` refuses to run on a dirty tree, without a `v`-prefixed `TAG`, or without the token.
+
 ## License
 
 [MIT](LICENSE)
