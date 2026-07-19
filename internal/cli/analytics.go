@@ -20,44 +20,65 @@ func newAnalyticsCmd() *cobra.Command {
 		Short: "Archive-wide aggregates: message volume, sender growth, rankings, thread sizes",
 	}
 	cmd.AddCommand(
-		newAnalyticsSeriesCmd("messages", "Messages per time bucket",
-			"/analytics/messages", "sent_at"),
-		newAnalyticsSeriesCmd("senders", "New senders per time bucket of their first post",
-			"/analytics/senders", "the sender's first post"),
+		newAnalyticsMessagesCmd(),
+		newAnalyticsSendersCmd(),
 		newAnalyticsTopSendersCmd(),
 		newAnalyticsThreadSizesCmd(),
 	)
 	return cmd
 }
 
-// newAnalyticsSeriesCmd builds `analytics messages` and `analytics senders`,
-// which share flags and the BUCKET|START|COUNT series shape and differ only in
-// path and which timestamp column the from/to window bounds.
-func newAnalyticsSeriesCmd(name, short, path, column string) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   name,
-		Short: short,
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			q := collectQuery(cmd, "interval", "from", "to", "cumulative")
-			return getRender(cmd, path, q, func(page api.Page[api.SeriesPoint]) {
-				if len(page.Data) == 0 {
-					output.EmptyNote("no results")
-					return
-				}
-				rows := make([][]string, 0, len(page.Data))
-				for _, p := range page.Data {
-					rows = append(rows, []string{p.Bucket, p.BucketStart, strconv.Itoa(p.Count)})
-				}
-				output.Table(os.Stdout, []string{"BUCKET", "START", "COUNT"}, rows)
-			})
-		},
-	}
+// addSeriesFlags registers the flag set the two time-series commands share;
+// column names which timestamp the from/to window bounds.
+func addSeriesFlags(cmd *cobra.Command, column string) {
 	addEnumFlag(cmd, "interval", "bucket granularity (server default year)", "year", "quarter", "month")
 	cmd.Flags().String("from", "", fmt.Sprintf("ISO-8601 lower bound on %s", column))
 	cmd.Flags().String("to", "", fmt.Sprintf("ISO-8601 upper bound on %s", column))
 	cmd.Flags().Bool("cumulative", false,
 		"count is a running total through each bucket, not the bucket's own rate")
+}
+
+func renderSeries(page api.Page[api.SeriesPoint]) {
+	if len(page.Data) == 0 {
+		output.EmptyNote("no results")
+		return
+	}
+	rows := make([][]string, 0, len(page.Data))
+	for _, p := range page.Data {
+		rows = append(rows, []string{p.Bucket, p.BucketStart, strconv.Itoa(p.Count)})
+	}
+	output.Table(os.Stdout, []string{"BUCKET", "START", "COUNT"}, rows)
+}
+
+// The two series commands keep their paths literal in their own RunE (rather
+// than sharing a parameterized constructor) so the API⇄CLI drift gate in the
+// server repo can extract endpoint and params from one function scope.
+
+func newAnalyticsMessagesCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "messages",
+		Short: "Messages per time bucket",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			q := collectQuery(cmd, "interval", "from", "to", "cumulative")
+			return getRender(cmd, "/analytics/messages", q, renderSeries)
+		},
+	}
+	addSeriesFlags(cmd, "sent_at")
+	return cmd
+}
+
+func newAnalyticsSendersCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "senders",
+		Short: "New senders per time bucket of their first post",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			q := collectQuery(cmd, "interval", "from", "to", "cumulative")
+			return getRender(cmd, "/analytics/senders", q, renderSeries)
+		},
+	}
+	addSeriesFlags(cmd, "the sender's first post")
 	return cmd
 }
 
