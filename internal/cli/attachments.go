@@ -17,27 +17,25 @@ func newAttachmentsCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, "limit", "after", "before")
-			return getRender(cmd, "/attachments", q, func(page api.Page[api.AttachmentRow]) {
+			return getRenderPage(cmd, "/attachments", q, func(page api.Page[api.AttachmentRow]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, a := range page.Data {
-					patch := ""
-					if a.IsPatch {
-						patch = "patch"
-					}
 					rows = append(rows, []string{
 						strconv.Itoa(a.ID), output.Truncate(a.Filename, 40), a.ContentType,
-						output.HumanBytes(a.Size), patch, output.OrDash(a.MessageID),
+						output.HumanBytes(int64(a.Size)), patchCell(a.IsPatch), output.OrDash(a.MessageID),
 					})
 				}
 				output.Table(os.Stdout,
-					[]string{"ID", "FILENAME", "TYPE", "SIZE", "", "MESSAGE-ID"}, rows)
+					[]string{"ID", "FILENAME", "TYPE", "SIZE", "PATCH", "MESSAGE-ID"}, rows)
 				output.CursorFooter(page.NextCursor)
 			})
 		},
 	}
-	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
-	cmd.Flags().String("after", "", "page cursor")
-	cmd.Flags().String("before", "", "page cursor")
+	addPaginationFlags(cmd)
 
 	cmd.AddCommand(newAttachmentsGetCmd(), newAttachmentsPatchCmd())
 	return cmd
@@ -46,7 +44,7 @@ func newAttachmentsCmd() *cobra.Command {
 func attachmentID(arg string) (int, error) {
 	id, err := strconv.Atoi(arg)
 	if err != nil {
-		return 0, fmt.Errorf("attachment id must be an integer, got %q", arg)
+		return 0, usagef("attachment id must be an integer, got %q", arg)
 	}
 	return id, nil
 }
@@ -68,7 +66,7 @@ func newAttachmentsGetCmd() *cobra.Command {
 						{"Id", strconv.Itoa(a.ID)},
 						{"Filename", a.Filename},
 						{"Type", a.ContentType},
-						{"Size", output.HumanBytes(a.Size)},
+						{"Size", output.HumanBytes(int64(a.Size))},
 						{"Patch", strconv.FormatBool(a.IsPatch)},
 						{"Message-Id", output.OrDash(a.MessageID)},
 					})

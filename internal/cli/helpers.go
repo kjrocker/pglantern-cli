@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"codeberg.org/kehvyn/pglantern-cli/internal/api"
@@ -129,9 +130,33 @@ func rejectPaginationWithIDs(cmd *cobra.Command) error {
 	}
 	for _, name := range []string{"limit", "after", "before"} {
 		if cmd.Flags().Changed(name) {
-			return fmt.Errorf("--id cannot be combined with --limit, --after, or --before")
+			return usagef("--id cannot be combined with --limit, --after, or --before")
 		}
 	}
+	return nil
+}
+
+// addPaginationFlags registers the cursor-pagination flag set shared by every
+// paged collection command, plus the client-side --all/--max page follower.
+func addPaginationFlags(cmd *cobra.Command) {
+	cmd.Flags().IntP("limit", "n", 0, "page size (server default 25, max 100)")
+	cmd.Flags().String("after", "", "page cursor")
+	cmd.Flags().String("before", "", "page cursor")
+	cmd.Flags().Bool("all", false, "follow next_cursor and fetch every page (bounded by --max)")
+	cmd.Flags().Int("max", 5000, "with --all, stop after this many rows")
+}
+
+// positionalQuery folds positional args into the q param, matching `search`'s
+// ergonomics on commands where the query is optional. The positional and --q
+// forms are exclusive — silently preferring one would hide a typo'd query.
+func positionalQuery(cmd *cobra.Command, args []string, q url.Values) error {
+	if len(args) == 0 {
+		return nil
+	}
+	if cmd.Flags().Changed("q") {
+		return usagef("%s takes the query positionally or via --q, not both", cmd.CommandPath())
+	}
+	q.Set("q", strings.Join(args, " "))
 	return nil
 }
 
@@ -159,7 +184,7 @@ func requireArgs(what string) cobra.PositionalArgs {
 }
 
 func argError(cmd *cobra.Command, what string) error {
-	return fmt.Errorf("%s requires %s\n\nUsage:\n  %s", cmd.CommandPath(), what, cmd.UseLine())
+	return usagef("%s requires %s\n\nUsage:\n  %s", cmd.CommandPath(), what, cmd.UseLine())
 }
 
 // enumFlag is a pflag.Value that rejects values outside its allowed set at
@@ -206,5 +231,97 @@ func getRender[T any](cmd *cobra.Command, path string, q url.Values, render func
 		return fmt.Errorf("decoding response: %w", err)
 	}
 	render(v)
+	return nil
+}
+
+// getRenderPage is getRender for paged collections: under --all it follows
+// next_cursor client-side via getRenderAll, otherwise it fetches one page.
+func getRenderPage[T any](cmd *cobra.Command, path string, q url.Values, render func(api.Page[T])) error {
+	if all, _ := cmd.Flags().GetBool("all"); all {
+		return getRenderAll(cmd, path, q, render)
+	}
+	if cmd.Flags().Changed("max") {
+		return usagef("--max only applies with --all")
+	}
+	return getRender(cmd, path, q, render)
+}
+
+// getRenderAll implements --all: it follows next_cursor until the collection
+// or the --max row ceiling runs out. Requests are strictly sequential — one in
+// flight, the next only after the previous page is consumed — on the client's
+// single http.Client; no concurrency, no retries. A failed page aborts with the
+// error after printing the cursor that refetches it. Table mode accumulates
+// rows (bounded by --max) and renders once with no cursor footer; --json
+// streams each page's raw body as one compact line as it is fetched.
+//
+// The last page's limit is trimmed to the rows remaining under --max, so a
+// capped run stops at exactly --max rows and the resume cursor in the stderr
+// note continues from the very next row.
+func getRenderAll[T any](cmd *cobra.Command, path string, q url.Values, render func(api.Page[T])) error {
+	if cmd.Flags().Changed("before") {
+		return usagef("--all cannot be combined with --before")
+	}
+	if f := cmd.Flags().Lookup("id"); f != nil && f.Changed {
+		return usagef("--all cannot be combined with --id")
+	}
+	max, _ := cmd.Flags().GetInt("max")
+	if max <= 0 {
+		return usagef("--max must be a positive integer")
+	}
+	// Unset --limit means the server's default 25; --all wants fewer
+	// round-trips for the same rows, so it asks for full pages.
+	perPage := 100
+	if cmd.Flags().Changed("limit") {
+		perPage, _ = cmd.Flags().GetInt("limit")
+	}
+	client, err := clientFrom(cmd)
+	if err != nil {
+		return err
+	}
+	jsonMode, _ := cmd.Flags().GetBool("json")
+
+	var rows []T
+	count := 0
+	for {
+		fetch := perPage
+		if remaining := max - count; fetch > remaining {
+			fetch = remaining
+		}
+		q.Set("limit", strconv.Itoa(fetch))
+		body, err := client.Get(path, q)
+		if err != nil {
+			if cursor := q.Get("after"); cursor != "" {
+				fmt.Fprintf(os.Stderr, "# page failed; resume with --after %s\n", cursor)
+			}
+			return err
+		}
+		var page api.Page[T]
+		if err := json.Unmarshal(body, &page); err != nil {
+			return fmt.Errorf("decoding response: %w", err)
+		}
+		if jsonMode {
+			if err := output.JSONLine(os.Stdout, body); err != nil {
+				return err
+			}
+		} else {
+			rows = append(rows, page.Data...)
+		}
+		count += len(page.Data)
+		next := ""
+		if page.NextCursor != nil {
+			next = *page.NextCursor
+		}
+		if next == "" || len(page.Data) == 0 {
+			break
+		}
+		if count >= max {
+			fmt.Fprintf(os.Stderr, "# stopped at %d rows; resume with --after %s or raise --max\n", count, next)
+			break
+		}
+		q.Set("after", next)
+	}
+	if !jsonMode {
+		render(api.Page[T]{Data: rows})
+	}
 	return nil
 }

@@ -15,6 +15,10 @@ func newListsCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return getRender(cmd, "/lists", nil, func(page api.Page[api.List]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, l := range page.Data {
 					active := "yes"

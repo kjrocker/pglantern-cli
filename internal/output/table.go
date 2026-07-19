@@ -72,6 +72,12 @@ func CursorFooter(next *string) {
 	}
 }
 
+// EmptyNote flags a zero-row result on stderr (`# <msg>`) so an empty
+// table isn't mistaken for a broken pipe or a hung command.
+func EmptyNote(msg string) {
+	fmt.Fprintf(os.Stderr, "# %s\n", msg)
+}
+
 // OrDash renders optional strings in table cells.
 func OrDash(s *string) string {
 	if s == nil || *s == "" {
@@ -82,22 +88,27 @@ func OrDash(s *string) string {
 
 // HumanBytes renders a byte count as a compact, human-readable size
 // (e.g. 512 B, 1.4 KB, 3.0 MB) using 1024-based units.
-func HumanBytes(n int) string {
+func HumanBytes(n int64) string {
 	const unit = 1024
 	if n < unit {
 		return fmt.Sprintf("%d B", n)
 	}
 	div, exp := int64(unit), 0
-	for i := int64(n) / unit; i >= unit; i /= unit {
+	for i := n / unit; i >= unit; i /= unit {
 		div *= unit
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
-// Truncate shortens long free-text cells (subjects, senders) so rows stay
-// readable; IDs and cursors are never truncated.
+// Truncate shortens long free-text cells (subjects, senders) so interactive
+// tables stay readable. Piped output passes through untruncated — matching
+// sanitizeCell's pipe-safety intent, a pipe gets the full data. IDs and
+// cursors are never truncated either way.
 func Truncate(s string, max int) string {
+	if !Interactive {
+		return s
+	}
 	r := []rune(s)
 	if len(r) <= max {
 		return s

@@ -19,14 +19,17 @@ func senderStatCells(s *api.SenderStats) (count, first, last string) {
 
 func newSendersCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "senders",
+		Use:   "senders [query...]",
 		Short: "Browse people who have posted to the lists",
-		Args:  cobra.NoArgs,
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := rejectPaginationWithIDs(cmd); err != nil {
 				return err
 			}
-			q := collectQuery(cmd, "q", "sort", "dir", "limit", "after", "before")
+			q := collectQuery(cmd, "q", "list", "sort", "dir", "limit", "after", "before")
+			if err := positionalQuery(cmd, args, q); err != nil {
+				return err
+			}
 			ids, err := collectIDs(cmd, cmd.InOrStdin())
 			if err != nil {
 				return err
@@ -36,12 +39,16 @@ func newSendersCmd() *cobra.Command {
 			for _, id := range ids {
 				q.Add("ids[]", id)
 			}
-			return getRender(cmd, "/senders", q, func(page api.Page[api.SenderSummary]) {
+			return getRenderPage(cmd, "/senders", q, func(page api.Page[api.SenderSummary]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, s := range page.Data {
 					count, first, last := senderStatCells(s.Stats)
 					rows = append(rows, []string{
-						strconv.Itoa(s.ID), output.Truncate(s.DisplayName, 32),
+						strconv.Itoa(s.ID), output.Truncate(s.DisplayName, 40),
 						s.Email, count, first, last,
 					})
 				}
@@ -52,11 +59,10 @@ func newSendersCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("q", "", "substring match on email or display name")
+	cmd.Flags().String("list", "", "restrict to senders who posted to this mailing list (stats scope to it too)")
 	addEnumFlag(cmd, "sort", "sort key", "messages", "first", "last")
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
-	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
-	cmd.Flags().String("after", "", "page cursor")
-	cmd.Flags().String("before", "", "page cursor")
+	addPaginationFlags(cmd)
 	addIDFlag(cmd, "fetch exactly this sender id")
 
 	cmd.AddCommand(newSendersGetCmd())
@@ -71,7 +77,7 @@ func newSendersGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := strconv.Atoi(args[0])
 			if err != nil {
-				return fmt.Errorf("sender id must be an integer, got %q", args[0])
+				return usagef("sender id must be an integer, got %q", args[0])
 			}
 			return getRender(cmd, fmt.Sprintf("/senders/%d", id), nil,
 				func(item api.Item[api.SenderFull]) {

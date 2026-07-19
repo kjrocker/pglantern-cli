@@ -44,7 +44,7 @@ func messageRows(msgs []api.MessageSummary) [][]string {
 	for _, m := range msgs {
 		rows = append(rows, []string{
 			m.SentAt,
-			output.Truncate(senderDisplay(m), 32),
+			output.Truncate(senderDisplay(m), 40),
 			output.Truncate(m.Subject, 64),
 			m.MessageID,
 		})
@@ -79,13 +79,9 @@ func messageDetail(m api.MessageFull) {
 		fmt.Println()
 		rows := make([][]string, 0, len(m.Attachments))
 		for _, a := range m.Attachments {
-			patch := ""
-			if a.IsPatch {
-				patch = "patch"
-			}
-			rows = append(rows, []string{fmt.Sprint(a.ID), a.Filename, a.ContentType, patch})
+			rows = append(rows, []string{fmt.Sprint(a.ID), a.Filename, a.ContentType, patchCell(a.IsPatch)})
 		}
-		output.Table(os.Stdout, []string{"ATTACHMENT", "FILENAME", "TYPE", ""}, rows)
+		output.Table(os.Stdout, []string{"ATTACHMENT", "FILENAME", "TYPE", "PATCH"}, rows)
 	}
 	fmt.Println()
 	fmt.Println(m.BodyText)
@@ -98,7 +94,11 @@ func messageDetail(m api.MessageFull) {
 func renderMessagePage(cmd *cobra.Command, path string, q url.Values, footer bool) error {
 	if full, _ := cmd.Flags().GetBool("full"); full {
 		q.Set("response", "full")
-		return getRender(cmd, path, q, func(page api.Page[api.MessageFull]) {
+		return getRenderPage(cmd, path, q, func(page api.Page[api.MessageFull]) {
+			if len(page.Data) == 0 {
+				output.EmptyNote("no results")
+				return
+			}
 			for i, m := range page.Data {
 				if i > 0 {
 					fmt.Println()
@@ -110,7 +110,11 @@ func renderMessagePage(cmd *cobra.Command, path string, q url.Values, footer boo
 			}
 		})
 	}
-	return getRender(cmd, path, q, func(page api.Page[api.MessageSummary]) {
+	return getRenderPage(cmd, path, q, func(page api.Page[api.MessageSummary]) {
+		if len(page.Data) == 0 {
+			output.EmptyNote("no results")
+			return
+		}
 		messageTable(page.Data)
 		if footer {
 			output.CursorFooter(page.NextCursor)
@@ -123,6 +127,14 @@ func renderMessagePage(cmd *cobra.Command, path string, q url.Values, footer boo
 func addFullFlag(cmd *cobra.Command) {
 	cmd.Flags().Bool("full", false,
 		"return full message rows (body_text, attachments) instead of summaries")
+}
+
+// patchCell renders the is-patch marker: yes/-, matching lists' ACTIVE column.
+func patchCell(isPatch bool) string {
+	if isPatch {
+		return "yes"
+	}
+	return "-"
 }
 
 // commitHeader names the columns in the order commitRows emits them. Every
@@ -166,9 +178,7 @@ func newMessagesCmd() *cobra.Command {
 	cmd.Flags().String("from", "", "ISO-8601 lower bound on sent_at")
 	cmd.Flags().String("to", "", "ISO-8601 upper bound on sent_at")
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
-	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
-	cmd.Flags().String("after", "", "page cursor")
-	cmd.Flags().String("before", "", "page cursor")
+	addPaginationFlags(cmd)
 	addIDFlag(cmd, "fetch exactly this Message-Id")
 	addFullFlag(cmd)
 
@@ -218,7 +228,7 @@ func newMessagesCommitsCmd() *cobra.Command {
 			path := messagePath(args[0], "/commits")
 			return getRender(cmd, path, nil, func(page api.Page[api.CommitGroup]) {
 				if len(page.Data) == 0 {
-					fmt.Fprintln(os.Stderr, "no commits landed from this thread")
+					output.EmptyNote("no commits landed from this thread")
 					return
 				}
 				for i, group := range page.Data {
@@ -241,6 +251,10 @@ func newMessagesRefsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := messagePath(args[0], "/refs")
 			return getRender(cmd, path, nil, func(page api.Page[api.Ref]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, r := range page.Data {
 					rows = append(rows, []string{r.RefType, r.Value, output.OrDash(r.ResolvedSHA)})

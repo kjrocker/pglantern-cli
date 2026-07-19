@@ -117,7 +117,7 @@ func newVersionsGucsCmd() *cobra.Command {
 					output.Table(os.Stdout, s.header, s.rows)
 				}
 				if first {
-					fmt.Fprintf(os.Stderr, "no GUC changes between %s and %s\n", d.ChangedSince, d.Major)
+					output.EmptyNote(fmt.Sprintf("no GUC changes between %s and %s", d.ChangedSince, d.Major))
 				}
 			})
 		},

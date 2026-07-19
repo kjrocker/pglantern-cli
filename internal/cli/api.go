@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -27,7 +26,7 @@ func newAPICmd() *cobra.Command {
 			for _, p := range params {
 				key, value, ok := strings.Cut(p, "=")
 				if !ok {
-					return fmt.Errorf("--param must be key=value, got %q", p)
+					return usagef("--param must be key=value, got %q", p)
 				}
 				q.Add(key, value)
 			}
