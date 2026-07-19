@@ -75,6 +75,10 @@ func newCommitsGetCmd() *cobra.Command {
 					}
 					pairs = append(pairs, [2]string{"Release", release})
 				}
+				pairs = append(pairs,
+					[2]string{"Archive", c.ArchiveURL},
+					[2]string{"Link", c.HTMLURL},
+				)
 				output.Detail(os.Stdout, pairs)
 				// The body already begins with the subject line.
 				if c.Body != "" {
