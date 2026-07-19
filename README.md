@@ -59,12 +59,15 @@ lantern messages thread '<message-id>'
 lantern search vacuum full --committed --major 17
 lantern senders --sort messages --dir desc
 lantern senders get 42
-lantern threads --q vacuum --from 2024-01-01   # discussion threads, newest activity first
+lantern threads vacuum --from 2024-01-01       # discussion threads, newest activity first
 lantern threads --sort messages --dir desc     # busiest threads first
 lantern attachments patch 1234          # parsed patch summary
-lantern commits --path src/backend/access/ --major 16
+lantern commits --q "shared_buffers" --path src/backend/access/ --major 16
 lantern commits get <sha>               # full 40-hex sha
 lantern commits thread <sha>            # the discussion behind a commit
+lantern analytics messages --interval month --cumulative
+lantern analytics top-senders -n 10 --from 2025-01-01
+lantern analytics thread-sizes
 lantern versions
 lantern versions gucs 17                        # GUC catalog
 lantern versions gucs 17 --changed-since 16     # what changed between majors
@@ -72,11 +75,18 @@ lantern activity src/backend/access/    # merged commit + thread activity
 lantern imports --list pgsql-hackers
 ```
 
+`threads` and `senders` take an optional positional query like `search`
+(`--q` remains as an alias).
+
 Every command renders a table by default, but accepts a `--json` argument:
 
 ```sh
 lantern messages --limit 3 --json | jq '.data[].subject'
 ```
+
+In a terminal, tables truncate long cells and page through `$LANTERN_PAGER`,
+`$PAGER`, or `less -FRX` (`--no-pager` disables). Piped output is untruncated
+and unpaged.
 
 Fetch a known set of records instead of a page with `--id` (repeatable; `-`
 reads newline-delimited ids from stdin), on `messages`, `commits`, and
@@ -91,6 +101,15 @@ Paginated commands print the next-page cursor to **stderr**
 ```
 # next: --after g3QAAAAC...
 ```
+
+`--all` follows cursors client-side (sequential requests, 100 rows per page)
+up to a `--max` row ceiling, default 5000. Hitting the ceiling prints a
+resume note on stderr with the cursor to continue from. With `--json`, `--all`
+streams one raw page document per line. Not combinable with `--before` or
+`--id`.
+
+Exit codes are scriptable: `0` success, `2` usage error, `3` auth (401/403),
+`4` not found (404), `1` everything else.
 
 For anything the CLI doesn't wrap, there's an escape hatch:
 

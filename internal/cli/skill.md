@@ -67,9 +67,11 @@ pglantern.com.
 
 ## Working as an agent: always use `--json`
 
-Every command renders a human table by default. Tables truncate fields (senders
-at 32 chars, subjects at 64) with an ellipsis, so **parsing the table loses
-data**. Add `--json` to get the server's raw body and pipe it to `jq`:
+Every command renders a human table by default. In a terminal, tables truncate
+long fields (senders at 40 chars, subjects at 64) with an ellipsis and route
+through a pager; piped output is untruncated and unpaged, so table output is
+safe for `awk`/`cut`. Still prefer `--json` — it's the server's raw body,
+shaped for `jq`, with nothing flattened:
 
 ```sh
 lantern messages --limit 3 --json | jq -r '.data[].subject'
@@ -93,9 +95,13 @@ Start from whichever entity the question is about:
 | Commits that landed from its thread | `lantern messages commits '<message-id>'` |
 | Refs it cites (shas, paths, CVEs) | `lantern messages refs '<message-id>'` |
 | Full-text search | `lantern search vacuum full --committed --major 17` |
-| Discussion threads, newest activity | `lantern threads --q vacuum --from 2024-01-01` |
+| Discussion threads, newest activity | `lantern threads vacuum --from 2024-01-01` |
 | Busiest threads first | `lantern threads --sort messages --dir desc` |
 | People who post | `lantern senders --sort messages --dir desc` |
+| Message volume over time | `lantern analytics messages --interval month --from 2024-01-01` |
+| Community growth (new senders) | `lantern analytics senders --cumulative` |
+| Most prolific senders (ranked) | `lantern analytics top-senders -n 10 --from 2025-01-01` |
+| Thread size distribution | `lantern analytics thread-sizes` |
 | One person + recent messages | `lantern senders get 42` |
 | Commits by path/author/major | `lantern commits --path src/backend/access/ --major 16` |
 | One commit (+ files, releases) | `lantern commits get <sha-or-prefix>` |
@@ -108,13 +114,26 @@ Start from whichever entity the question is about:
 | Which mbox files were ingested | `lantern imports --list pgsql-hackers` |
 
 Common filters on the list commands: `--from` / `--to` (ISO-8601 bounds),
-`--limit` (server default 25, **max 100**), `--after` / `--before` (cursors).
-`threads` and `senders` share a sort vocabulary: `--sort messages|first|last`
-with `--dir asc|desc` (server default `last`/`desc`; leave both unset to keep
-it). `search` adds `--sender`, `--committed`, `--path`, `--major`, `--sort`
-(`relevance` default, or `sent_at`). `commits` adds `--path`, `--author`,
-`--major`. `commits get` takes a full 40-hex sha **or** any unambiguous prefix
-(≥ 4 hex, git-style); an ambiguous prefix errors and asks for more characters.
+`--limit`/`-n` (server default 25, **max 100** per page), `--after` /
+`--before` (cursors), and `--all` to follow cursors client-side (see
+Pagination). `threads` and `senders` take an optional positional query like
+`search` (`lantern threads vacuum`, `lantern senders lane`; `--q` still works
+as an alias, but not both at once) and share a sort vocabulary: `--sort
+messages|first|last` with `--dir asc|desc` (server default `last`/`desc`;
+leave both unset to keep it). `search` adds `--list`, `--sender`,
+`--committed`, `--path`, `--major`, `--sort` (`relevance` default, or
+`sent_at`). `senders` adds `--list` (scopes both the people and their stats to
+that list). `commits` adds `--q` (substring over the commit message),
+`--path`, `--author`, `--major`. `commits get` takes a full 40-hex sha **or**
+any unambiguous prefix (≥ 4 hex, git-style); an ambiguous prefix errors and
+asks for more characters.
+
+The `analytics` subcommands are bounded aggregates — no cursors, no
+pagination flags. The two series (`messages`, `senders`) take `--interval
+year|quarter|month`, `--from`/`--to`, and `--cumulative` (running total);
+`top-senders` takes `--limit`/`-n` and a window; `thread-sizes` takes a window
+over the thread's `started_at`. Series rows are `bucket`, `bucket_start`,
+`count` and are dense — empty buckets are present with `count: 0`.
 
 For anything the CLI doesn't wrap, there's a GET escape hatch:
 
@@ -149,6 +168,32 @@ and feed it back to `--after`:
 C=$(lantern messages --limit 100 --json | jq -r '.next_cursor')
 lantern messages --limit 100 --after "$C" --json | jq -r '.data[].subject'
 ```
+
+### `--all`: follow cursors client-side
+
+`--all` fetches page after page (sequentially, 100 rows per request unless
+`--limit` says otherwise) until the collection runs out or the `--max` row
+ceiling (default **5000**) is hit. There is no "unlimited" — a bigger dump
+means passing a bigger `--max`. Hitting the ceiling prints a resume note on
+stderr, so a capped run is never silently truncated:
+
+```
+# stopped at 5000 rows; resume with --after g3QAAAAC... or raise --max
+```
+
+With `--json`, `--all` **streams one raw page document per line** as it is
+fetched (not one merged document), so pipe it through `jq` per-line:
+
+```sh
+lantern messages --all --max 1000 --json | jq -r '.data[].subject'
+lantern messages --all --max 1000 --json | jq -s '[.[].data[]] | length'
+```
+
+Note `.next_cursor` on each streamed line is the *server's* per-page cursor —
+for resuming, trust the stderr note, which fires only when rows were actually
+left behind. `--all` composes with `--after` (start point) and every filter,
+but not with `--before` or `--id` (usage error). For a full-corpus export,
+don't: that's what the pipeline/DB is for.
 
 ### Exact ids
 
@@ -288,6 +333,28 @@ lantern threads --sort messages --dir desc --limit 20 --json \
   | lantern messages --id - --json \
   | jq -r '.data[] | "\(.sent_at)\t\(.sender.email)\t\(.subject)"'
 ```
+
+## Exit codes
+
+Scriptable, `curl`-style:
+
+| Code | Meaning |
+|---|---|
+| 0 | success (including valid-but-empty results) |
+| 1 | anything else: transport errors, 5xx, 422s the server rejected |
+| 2 | usage: bad/conflicting flags, missing arguments, malformed ids |
+| 3 | auth: 401/403 — no key, or the server rejected it |
+| 4 | not found: 404 — the resource doesn't exist |
+
+So `lantern commits get <sha> || ...` can distinguish "no such commit" (4)
+from "bad key" (3) without parsing stderr.
+
+## Pager
+
+In a terminal, table output pages through `$LANTERN_PAGER`, `$PAGER`, or
+`less -FRX` (which exits immediately if the output fits one screen). Piped
+output never pages, so scripts and agents are unaffected; `--no-pager` forces
+it off in a terminal.
 
 ## Troubleshooting
 
