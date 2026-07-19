@@ -25,6 +25,15 @@ release:
 	@if [ -n "$$(git status --porcelain)" ]; then echo "error: working tree is dirty" >&2; exit 1; fi
 	go test ./...
 	goreleaser check
-	git tag -a $(TAG) -m $(TAG)
+	@# Retry-safe: reuse the tag if it already points at HEAD, refuse if it
+	@# points somewhere else (moving a published tag breaks anyone who has it).
+	@if git rev-parse -q --verify refs/tags/$(TAG) >/dev/null; then \
+		if [ "$$(git rev-parse refs/tags/$(TAG)^{commit})" != "$$(git rev-parse HEAD)" ]; then \
+			echo "error: tag $(TAG) exists but does not point at HEAD" >&2; exit 1; \
+		fi; \
+		echo "tag $(TAG) already exists at HEAD, reusing it"; \
+	else \
+		git tag -a $(TAG) -m $(TAG); \
+	fi
 	git push origin $(TAG)
 	goreleaser release --clean
