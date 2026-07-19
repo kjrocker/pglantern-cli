@@ -20,8 +20,8 @@ var skillMD string
 func newGenerateSkillCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate-skill <location>",
-		Short: "Write the query-horton agent SKILL.md to a location",
-		Long: "Write the bundled query-horton agent skill to disk so an assistant can\n" +
+		Short: "Write the query-lantern agent SKILL.md to a location",
+		Long: "Write the bundled query-lantern agent skill to disk so an assistant can\n" +
 			"learn to drive this CLI. <location> may be a directory (SKILL.md is written\n" +
 			"inside it) or a path ending in .md (written verbatim). Parent directories\n" +
 			"are created as needed.",
@@ -46,7 +46,7 @@ func newGenerateSkillCmd() *cobra.Command {
 			if err := os.WriteFile(dest, []byte(skillMD), 0o644); err != nil {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "Wrote query-horton skill to %s\n", dest)
+			fmt.Fprintf(os.Stderr, "Wrote query-lantern skill to %s\n", dest)
 			return nil
 		},
 	}

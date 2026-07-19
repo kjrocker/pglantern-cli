@@ -4,8 +4,8 @@ import (
 	"os"
 	"strconv"
 
-	"codeberg.org/kehvyn/horton-cli/internal/api"
-	"codeberg.org/kehvyn/horton-cli/internal/output"
+	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"codeberg.org/kehvyn/pglantern-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

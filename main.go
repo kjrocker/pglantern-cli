@@ -2,8 +2,7 @@ package main
 
 import (
 	"os"
-
-	"codeberg.org/kehvyn/horton-cli/internal/cli"
+	"codeberg.org/kehvyn/pglantern-cli/internal/cli"
 )
 
 func main() {

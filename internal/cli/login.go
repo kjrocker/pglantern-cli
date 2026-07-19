@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"codeberg.org/kehvyn/horton-cli/internal/api"
-	"codeberg.org/kehvyn/horton-cli/internal/config"
+	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"codeberg.org/kehvyn/pglantern-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -15,9 +15,9 @@ func newLoginCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Save an API key (created in the web UI under /users/api-keys)",
-		Long: "Save an API key for later commands. Keys are minted in the Horton web UI\n" +
+		Long: "Save an API key for later commands. Keys are minted in the pgLantern web UI\n" +
 			"under /users/api-keys. The key is validated against the server, then stored\n" +
-			"with the host in ~/.config/horton/config.json.",
+			"with the host in ~/.config/lantern/config.json.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
@@ -28,7 +28,7 @@ func newLoginCmd() *cobra.Command {
 
 			withToken, _ := cmd.Flags().GetBool("with-token")
 			if !withToken {
-				fmt.Fprint(os.Stderr, "Paste your Horton API key: ")
+				fmt.Fprint(os.Stderr, "Paste your pgLantern API key: ")
 			}
 			reader := bufio.NewReader(os.Stdin)
 			line, err := reader.ReadString('\n')

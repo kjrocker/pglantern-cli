@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"codeberg.org/kehvyn/horton-cli/internal/output"
+	"codeberg.org/kehvyn/pglantern-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +15,7 @@ func newAPICmd() *cobra.Command {
 		Use:   "api <path>",
 		Short: "GET any /api/v1 path and print the raw JSON",
 		Long: "Escape hatch for endpoints or params this CLI doesn't wrap. The path is\n" +
-			"relative to /api/v1 (e.g. `horton api /messages --param limit=3`).",
+			"relative to /api/v1 (e.g. `lantern api /messages --param limit=3`).",
 		Args: requireArg("an API path"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]

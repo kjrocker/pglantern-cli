@@ -68,7 +68,7 @@ The API emits two `details` shapes, both settled (`pgml-api`
      "details":{"errors":[{"path":"/sort","reason":"Invalid value for enum"}]}}}
    ```
 
-   This is the one that stings: `horton search foo --sort banana` currently
+   This is the one that stings: `lantern search foo --sort banana` currently
    prints just `Invalid value for enum`, and the fact that **`sort`** is the
    culprit is sitting in `details`, discarded. (Also hits `committed`, and any
    other CastAndValidate rejection.)
@@ -132,7 +132,7 @@ substring-present, or just append for shape 2 (the terse one) and leave shape 1
 alone. Result:
 
 ```
-horton search foo --sort banana
+lantern search foo --sort banana
 # => Invalid value for enum (parameter: sort)
 ```
 

@@ -1,13 +1,13 @@
 #!/bin/sh
-# Install the horton CLI into ~/.local/bin (override with --bin-dir or $HORTON_BIN_DIR).
+# Install the lantern CLI into ~/.local/bin (override with --bin-dir or $LANTERN_BIN_DIR).
 #
-#   curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash
-#   curl -fsSL https://codeberg.org/kehvyn/horton-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
+#   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash
+#   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
 #
 # This script never edits your shell rc files.
 set -eu
 
-REPO="kehvyn/horton-cli"
+REPO="kehvyn/pglantern-cli"
 API="https://codeberg.org/api/v1/repos/$REPO"
 DOWNLOAD="https://codeberg.org/$REPO/releases/download"
 
@@ -30,7 +30,7 @@ while [ $# -gt 0 ]; do
 		;;
 	-h | --help)
 		echo "usage: install.sh [--bin-dir <path>]"
-		echo "env: HORTON_VERSION (e.g. v0.1.0), HORTON_BIN_DIR"
+		echo "env: LANTERN_VERSION (e.g. v0.1.0), LANTERN_BIN_DIR"
 		exit 0
 		;;
 	*)
@@ -64,29 +64,29 @@ else
 fi
 
 # 3. Resolve the version.
-if [ -n "${HORTON_VERSION:-}" ]; then
-	tag="$HORTON_VERSION"
+if [ -n "${LANTERN_VERSION:-}" ]; then
+	tag="$LANTERN_VERSION"
 else
 	tag="$(fetch_stdout "$API/releases/latest" |
 		grep -o '"tag_name":[[:space:]]*"[^"]*"' |
 		sed 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/' |
 		head -n 1)"
-	[ -n "$tag" ] || die "could not determine the latest release; set HORTON_VERSION=vX.Y.Z"
+	[ -n "$tag" ] || die "could not determine the latest release; set LANTERN_VERSION=vX.Y.Z"
 fi
 version="${tag#v}"
 
 # 4. Resolve the install directory.
 if [ -z "$BIN_DIR" ]; then
-	BIN_DIR="${HORTON_BIN_DIR:-$HOME/.local/bin}"
+	BIN_DIR="${LANTERN_BIN_DIR:-$HOME/.local/bin}"
 fi
 mkdir -p "$BIN_DIR" || die "cannot create $BIN_DIR"
 
-archive="horton_${version}_${os}_${arch}.tar.gz"
+archive="lantern_${version}_${os}_${arch}.tar.gz"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
-echo "downloading horton $tag ($arch)"
+echo "downloading lantern $tag ($arch)"
 fetch "$DOWNLOAD/$tag/$archive" "$tmp/$archive" ||
 	die "download failed: $DOWNLOAD/$tag/$archive"
 
@@ -117,10 +117,10 @@ fi
 
 # 6. Install.
 tar -xzf "$tmp/$archive" -C "$tmp" || die "could not extract $archive"
-[ -f "$tmp/horton" ] || die "archive did not contain a horton binary"
-install -m 0755 "$tmp/horton" "$BIN_DIR/horton" || die "could not install into $BIN_DIR"
+[ -f "$tmp/lantern" ] || die "archive did not contain a lantern binary"
+install -m 0755 "$tmp/lantern" "$BIN_DIR/lantern" || die "could not install into $BIN_DIR"
 
-echo "installed $("$BIN_DIR/horton" --version) to $BIN_DIR/horton"
+echo "installed $("$BIN_DIR/lantern" --version) to $BIN_DIR/lantern"
 
 # 7. PATH check — we report, we do not edit rc files.
 case ":$PATH:" in
@@ -135,4 +135,4 @@ case ":$PATH:" in
 	;;
 esac
 
-echo "shell completion: horton completion zsh|bash|fish|powershell"
+echo "shell completion: lantern completion zsh|bash|fish|powershell"

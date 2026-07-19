@@ -1,4 +1,4 @@
-module codeberg.org/kehvyn/horton-cli
+module codeberg.org/kehvyn/pglantern-cli
 
 go 1.24.13
 

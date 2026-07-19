@@ -1,6 +1,6 @@
 version: 2
 
-project_name: horton
+project_name: lantern
 
 # Forgejo runners inject a GITHUB_TOKEN alongside our GITEA_TOKEN; force
 # GoReleaser to use the Gitea one instead of erroring on multiple tokens.
@@ -11,9 +11,9 @@ gitea_urls:
   download: https://codeberg.org
 
 builds:
-  - id: horton
+  - id: lantern
     main: .
-    binary: horton
+    binary: lantern
     env:
       - CGO_ENABLED=0
     goos:
@@ -23,12 +23,12 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X codeberg.org/kehvyn/horton-cli/internal/cli.version={{ .Version }}
+      - -s -w -X codeberg.org/kehvyn/pglantern-cli/internal/cli.version={{ .Version }}
 
 archives:
-  - id: horton
+  - id: lantern
     formats: [tar.gz]
-    name_template: horton_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    name_template: lantern_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     files:
       - README.md
       - LICENSE
@@ -42,4 +42,4 @@ release:
   mode: replace
   gitea:
     owner: kehvyn
-    name: horton-cli
+    name: pglantern-cli
