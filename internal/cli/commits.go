@@ -19,7 +19,7 @@ func newCommitsCmd() *cobra.Command {
 			if err := rejectPaginationWithIDs(cmd); err != nil {
 				return err
 			}
-			q := collectQuery(cmd, "path", "author", "major", "from", "to", "limit", "after", "before")
+			q := collectQuery(cmd, "q", "path", "author", "major", "from", "to", "limit", "after", "before")
 			ids, err := collectIDs(cmd, cmd.InOrStdin())
 			if err != nil {
 				return err
@@ -29,20 +29,23 @@ func newCommitsCmd() *cobra.Command {
 			for _, id := range ids {
 				q.Add("ids[]", id)
 			}
-			return getRender(cmd, "/commits", q, func(page api.Page[api.CommitSummary]) {
+			return getRenderPage(cmd, "/commits", q, func(page api.Page[api.CommitSummary]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				output.Table(os.Stdout, commitHeader, commitRows(page.Data))
 				output.CursorFooter(page.NextCursor)
 			})
 		},
 	}
+	cmd.Flags().String("q", "", "case-insensitive substring over the subject or full commit message")
 	cmd.Flags().String("path", "", "commits touching files under this path prefix")
 	cmd.Flags().String("author", "", "substring match on author name or email")
 	cmd.Flags().String("major", "", "commits first shipped in this major (16, 9.6, master)")
 	cmd.Flags().String("from", "", "ISO-8601 lower bound on committed_at")
 	cmd.Flags().String("to", "", "ISO-8601 upper bound on committed_at")
-	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
-	cmd.Flags().String("after", "", "page cursor")
-	cmd.Flags().String("before", "", "page cursor")
+	addPaginationFlags(cmd)
 	addIDFlag(cmd, "fetch exactly this commit (full 40-hex sha, no prefixes)")
 
 	cmd.AddCommand(newCommitsGetCmd(), newCommitsThreadCmd())
@@ -61,9 +64,9 @@ func newCommitsGetCmd() *cobra.Command {
 				pairs := [][2]string{
 					{"Commit", c.SHA},
 					{"Author", fmt.Sprintf("%s <%s>", c.AuthorName, c.AuthorEmail)},
-					{"Authored", c.AuthoredAt},
+					{"Authored at", c.AuthoredAt},
 					{"Committer", fmt.Sprintf("%s <%s>", c.CommitterName, c.CommitterEmail)},
-					{"Committed", c.CommittedAt},
+					{"Committed at", c.CommittedAt},
 				}
 				for _, r := range c.Releases {
 					release := r.Branch
@@ -110,7 +113,7 @@ func newCommitsThreadCmd() *cobra.Command {
 					messageTable(thread.Messages)
 				}
 				if len(t.Threads) == 0 {
-					fmt.Fprintln(os.Stderr, "no archived discussion found")
+					output.EmptyNote("no archived discussion found")
 				}
 				for _, ref := range t.UnresolvedRefs {
 					fmt.Fprintf(os.Stderr, "# unresolved ref (%s): %s\n", ref.Source, ref.RefMessageID)

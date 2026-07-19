@@ -32,17 +32,24 @@ func threadMessageIDCell(s *api.ThreadStarter) string {
 
 func newThreadsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "threads",
+		Use:   "threads [query...]",
 		Short: "Browse discussion threads across the lists",
-		Args:  cobra.NoArgs,
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, "q", "sort", "dir", "from", "to", "limit", "after", "before")
-			return getRender(cmd, "/threads", q, func(page api.Page[api.ThreadSummary]) {
+			if err := positionalQuery(cmd, args, q); err != nil {
+				return err
+			}
+			return getRenderPage(cmd, "/threads", q, func(page api.Page[api.ThreadSummary]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, t := range page.Data {
 					rows = append(rows, []string{
-						output.Truncate(t.Subject, 40),
-						output.Truncate(threadStarterCell(t.Starter), 32),
+						output.Truncate(t.Subject, 64),
+						output.Truncate(threadStarterCell(t.Starter), 40),
 						strconv.Itoa(t.MessageCount),
 						output.OrDash(&t.StartedAt),
 						t.LastActivityAt,
@@ -60,8 +67,6 @@ func newThreadsCmd() *cobra.Command {
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	cmd.Flags().String("from", "", "only threads active on/after this date (ISO-8601)")
 	cmd.Flags().String("to", "", "only threads active on/before this date (ISO-8601)")
-	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
-	cmd.Flags().String("after", "", "page cursor")
-	cmd.Flags().String("before", "", "page cursor")
+	addPaginationFlags(cmd)
 	return cmd
 }

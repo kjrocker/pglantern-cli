@@ -2,7 +2,6 @@ package cli
 
 import (
 	"os"
-	"strconv"
 
 	"codeberg.org/kehvyn/pglantern-cli/internal/api"
 	"codeberg.org/kehvyn/pglantern-cli/internal/output"
@@ -17,13 +16,17 @@ func newImportsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, "list")
 			return getRender(cmd, "/imports", q, func(page api.Page[api.ImportFile]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, f := range page.Data {
 					rows = append(rows, []string{
-						f.Basename, strconv.FormatInt(f.Size, 10), f.InsertedAt,
+						f.Basename, output.HumanBytes(f.Size), f.InsertedAt,
 					})
 				}
-				output.Table(os.Stdout, []string{"FILE", "BYTES", "IMPORTED AT"}, rows)
+				output.Table(os.Stdout, []string{"FILE", "SIZE", "IMPORTED AT"}, rows)
 			})
 		},
 	}

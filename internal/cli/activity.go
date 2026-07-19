@@ -16,7 +16,11 @@ func newActivityCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, "major", "limit", "after", "before")
 			q.Set("path", args[0])
-			return getRender(cmd, "/source/activity", q, func(page api.Page[api.ActivityRow]) {
+			return getRenderPage(cmd, "/source/activity", q, func(page api.Page[api.ActivityRow]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("no results")
+					return
+				}
 				rows := make([][]string, 0, len(page.Data))
 				for _, r := range page.Data {
 					ref := r.SHA
@@ -33,8 +37,6 @@ func newActivityCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("major", "", "narrow commits to this major's containment (16, 9.6, master)")
-	cmd.Flags().Int("limit", 0, "page size (server default 25, max 100)")
-	cmd.Flags().String("after", "", "page cursor")
-	cmd.Flags().String("before", "", "page cursor")
+	addPaginationFlags(cmd)
 	return cmd
 }

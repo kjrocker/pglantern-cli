@@ -240,6 +240,25 @@ type DocPages struct {
 	Docs  []DocPage `json:"docs"`
 }
 
+// SeriesPoint is one bucket of an /analytics time series (messages, senders).
+type SeriesPoint struct {
+	Bucket      string `json:"bucket"`
+	BucketStart string `json:"bucket_start"`
+	Count       int    `json:"count"`
+}
+
+type TopSender struct {
+	DisplayName  string `json:"display_name"`
+	Email        string `json:"email"`
+	MessageCount int    `json:"message_count"`
+}
+
+// SizeBucket is one band of the /analytics/thread-sizes distribution.
+type SizeBucket struct {
+	Bucket string `json:"bucket"`
+	Count  int    `json:"count"`
+}
+
 type ImportFile struct {
 	Basename   string `json:"basename"`
 	Path       string `json:"path"`

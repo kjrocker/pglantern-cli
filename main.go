@@ -2,11 +2,17 @@ package main
 
 import (
 	"os"
+
 	"codeberg.org/kehvyn/pglantern-cli/internal/cli"
+	"codeberg.org/kehvyn/pglantern-cli/internal/output"
 )
 
 func main() {
-	if err := cli.NewRootCmd().Execute(); err != nil {
-		os.Exit(1)
+	err := cli.NewRootCmd().Execute()
+	// Cobra skips PersistentPostRun when RunE errors, so close the pager here
+	// too before exiting; it holds the terminal until the user quits.
+	output.StopPager()
+	if err != nil {
+		os.Exit(cli.ExitCode(err))
 	}
 }

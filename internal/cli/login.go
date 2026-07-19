@@ -9,6 +9,7 @@ import (
 	"codeberg.org/kehvyn/pglantern-cli/internal/api"
 	"codeberg.org/kehvyn/pglantern-cli/internal/config"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 func newLoginCmd() *cobra.Command {
@@ -27,15 +28,29 @@ func newLoginCmd() *cobra.Command {
 			host := resolveHost(cmd, cfg)
 
 			withToken, _ := cmd.Flags().GetBool("with-token")
-			if !withToken {
+			var key string
+			if !withToken && term.IsTerminal(int(os.Stdin.Fd())) {
+				// Interactive paste: mask the key so it doesn't land in the
+				// scrollback. ReadPassword swallows the newline; echo it so the
+				// next line starts fresh.
 				fmt.Fprint(os.Stderr, "Paste your pgLantern API key: ")
+				raw, err := term.ReadPassword(int(os.Stdin.Fd()))
+				fmt.Fprintln(os.Stderr)
+				if err != nil {
+					return fmt.Errorf("reading API key: %w", err)
+				}
+				key = strings.TrimSpace(string(raw))
+			} else {
+				if !withToken {
+					fmt.Fprint(os.Stderr, "Paste your pgLantern API key: ")
+				}
+				reader := bufio.NewReader(os.Stdin)
+				line, err := reader.ReadString('\n')
+				if err != nil && line == "" {
+					return fmt.Errorf("reading API key: %w", err)
+				}
+				key = strings.TrimSpace(line)
 			}
-			reader := bufio.NewReader(os.Stdin)
-			line, err := reader.ReadString('\n')
-			if err != nil && line == "" {
-				return fmt.Errorf("reading API key: %w", err)
-			}
-			key := strings.TrimSpace(line)
 			if key == "" {
 				return fmt.Errorf("no API key provided")
 			}
