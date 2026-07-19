@@ -30,8 +30,7 @@ func newCommitsCmd() *cobra.Command {
 				q.Add("ids[]", id)
 			}
 			return getRender(cmd, "/commits", q, func(page api.Page[api.CommitSummary]) {
-				output.Table(os.Stdout, []string{"SHA", "AUTHOR", "COMMITTED AT", "SUBJECT"},
-					commitRows(page.Data))
+				output.Table(os.Stdout, commitHeader, commitRows(page.Data))
 				output.CursorFooter(page.NextCursor)
 			})
 		},

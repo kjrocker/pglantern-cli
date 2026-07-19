@@ -125,6 +125,10 @@ func addFullFlag(cmd *cobra.Command) {
 		"return full message rows (body_text, attachments) instead of summaries")
 }
 
+// commitHeader names the columns in the order commitRows emits them. Every
+// commit table must use the pair together so header and rows can't drift.
+var commitHeader = []string{"SHA", "AUTHOR", "COMMITTED AT", "SUBJECT"}
+
 func commitRows(commits []api.CommitSummary) [][]string {
 	rows := make([][]string, 0, len(commits))
 	for _, c := range commits {
@@ -222,8 +226,7 @@ func newMessagesCommitsCmd() *cobra.Command {
 						fmt.Println()
 					}
 					fmt.Printf("# %s\n", group.Subject)
-					output.Table(os.Stdout, []string{"SHA", "COMMITTED AT", "AUTHOR", "SUBJECT"},
-						commitRows(group.Commits))
+					output.Table(os.Stdout, commitHeader, commitRows(group.Commits))
 				}
 			})
 		},
