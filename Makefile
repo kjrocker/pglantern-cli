@@ -8,12 +8,12 @@ export GITEA_TOKEN
 
 help:
 	@echo "targets:"
-	@echo "  build                 build ./horton for this machine"
+	@echo "  build                 build ./lantern for this machine"
 	@echo "  release-dry           build all release archives into dist/, publish nothing"
 	@echo "  release TAG=vX.Y.Z    tag, push, and publish the release to Codeberg"
 
 build:
-	go build -o horton .
+	go build -o lantern .
 
 release-dry:
 	goreleaser release --snapshot --clean --skip=publish

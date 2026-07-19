@@ -1,6 +1,6 @@
-// Package cli defines the horton command tree.
+// Package cli defines the lantern command tree.
 //
-// horton is a deliberately thin client for the Horton JSON API: it validates
+// lantern is a deliberately thin client for the pgLantern JSON API: it validates
 // required arguments and flag types, passes everything else through verbatim,
 // and surfaces the server's error envelope as-is.
 package cli
@@ -12,8 +12,8 @@ var version = "dev"
 // NewRootCmd builds the root command with all subcommands attached.
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "horton",
-		Short:         "Command-line client for the Horton mailing-list archive API",
+		Use:           "lantern",
+		Short:         "Command-line client for the pgLantern mailing-list archive API",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: false,
@@ -21,8 +21,8 @@ func NewRootCmd() *cobra.Command {
 
 	flags := root.PersistentFlags()
 	flags.Bool("json", false, "print the raw JSON response instead of a table")
-	flags.String("host", "", "API host (default $HORTON_HOST, config file, or https://pglantern.com)")
-	flags.String("api-key", "", "API key (default $HORTON_API_KEY or config file)")
+	flags.String("host", "", "API host (default $LANTERN_HOST, config file, or https://pglantern.com)")
+	flags.String("api-key", "", "API key (default $LANTERN_API_KEY or config file)")
 
 	root.AddCommand(
 		newLoginCmd(),

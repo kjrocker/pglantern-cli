@@ -1,5 +1,5 @@
 // Package config persists the CLI's host and API key under the user config
-// directory (~/.config/horton/config.json on Linux).
+// directory (~/.config/lantern/config.json on Linux).
 package config
 
 import (
@@ -21,7 +21,7 @@ func Path() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "horton", "config.json"), nil
+	return filepath.Join(dir, "lantern", "config.json"), nil
 }
 
 // Load reads the config file. A missing file is not an error: it returns a

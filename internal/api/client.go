@@ -1,4 +1,4 @@
-// Package api is a thin HTTP client for the Horton JSON API under /api/v1.
+// Package api is a thin HTTP client for the pgLantern JSON API under /api/v1.
 // It sets the auth header, issues GETs, and decodes the server's error
 // envelope; response bodies are returned as raw bytes so --json output is
 // exactly what the server sent.

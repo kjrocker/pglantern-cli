@@ -9,21 +9,21 @@ import (
 	"os"
 	"strings"
 
-	"codeberg.org/kehvyn/horton-cli/internal/api"
-	"codeberg.org/kehvyn/horton-cli/internal/config"
-	"codeberg.org/kehvyn/horton-cli/internal/output"
+	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"codeberg.org/kehvyn/pglantern-cli/internal/config"
+	"codeberg.org/kehvyn/pglantern-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
 const defaultHost = "https://pglantern.com"
 
-// resolveHost: --host flag, then $HORTON_HOST, then config file, then the
+// resolveHost: --host flag, then $LANTERN_HOST, then config file, then the
 // hosted default.
 func resolveHost(cmd *cobra.Command, cfg config.Config) string {
 	if host, _ := cmd.Flags().GetString("host"); host != "" {
 		return host
 	}
-	if host := os.Getenv("HORTON_HOST"); host != "" {
+	if host := os.Getenv("LANTERN_HOST"); host != "" {
 		return host
 	}
 	if cfg.Host != "" {
@@ -32,12 +32,12 @@ func resolveHost(cmd *cobra.Command, cfg config.Config) string {
 	return defaultHost
 }
 
-// resolveKey: --api-key flag, then $HORTON_API_KEY, then config file.
+// resolveKey: --api-key flag, then $LANTERN_API_KEY, then config file.
 func resolveKey(cmd *cobra.Command, cfg config.Config) string {
 	if key, _ := cmd.Flags().GetString("api-key"); key != "" {
 		return key
 	}
-	if key := os.Getenv("HORTON_API_KEY"); key != "" {
+	if key := os.Getenv("LANTERN_API_KEY"); key != "" {
 		return key
 	}
 	return cfg.APIKey
@@ -50,7 +50,7 @@ func clientFrom(cmd *cobra.Command) (*api.Client, error) {
 	}
 	key := resolveKey(cmd, cfg)
 	if key == "" {
-		return nil, fmt.Errorf("no API key: run `horton login`, set $HORTON_API_KEY, or pass --api-key")
+		return nil, fmt.Errorf("no API key: run `lantern login`, set $LANTERN_API_KEY, or pass --api-key")
 	}
 	return api.New(resolveHost(cmd, cfg), key), nil
 }
