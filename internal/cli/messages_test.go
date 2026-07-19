@@ -45,6 +45,32 @@ func TestSenderDisplay(t *testing.T) {
 	}
 }
 
+// Regression for the swapped COMMITTED AT / AUTHOR headers: every commit table
+// uses commitHeader, and its column order must match what commitRows emits.
+func TestCommitHeaderMatchesRows(t *testing.T) {
+	rows := commitRows([]api.CommitSummary{{
+		SHA:         "abc123",
+		AuthorName:  "Tom Lane",
+		AuthorEmail: "tgl@sss.pgh.pa.us",
+		CommittedAt: "2026-01-02T03:04:05Z",
+		Subject:     "Fix planner",
+	}})
+	if len(rows) != 1 || len(rows[0]) != len(commitHeader) {
+		t.Fatalf("rows %v vs header %v: length mismatch", rows, commitHeader)
+	}
+	want := map[string]string{
+		"SHA":          "abc123",
+		"AUTHOR":       "Tom Lane <tgl@sss.pgh.pa.us>",
+		"COMMITTED AT": "2026-01-02T03:04:05Z",
+		"SUBJECT":      "Fix planner",
+	}
+	for i, h := range commitHeader {
+		if rows[0][i] != want[h] {
+			t.Errorf("column %s = %q, want %q", h, rows[0][i], want[h])
+		}
+	}
+}
+
 func TestNormalizeMessageID(t *testing.T) {
 	tests := []struct {
 		name string
