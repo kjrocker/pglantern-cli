@@ -34,6 +34,8 @@ type MessageSummary struct {
 	FromRaw       string  `json:"from_raw"`
 	HasAttachment bool    `json:"has_attachment"`
 	ThreadID      string  `json:"thread_id"`
+	ArchiveURL    string  `json:"archive_url"`
+	HTMLURL       string  `json:"html_url"`
 	Sender        *Sender `json:"sender"`
 }
 
@@ -70,6 +72,8 @@ type CommitSummary struct {
 	AuthorName  string    `json:"author_name"`
 	AuthorEmail string    `json:"author_email"`
 	CommittedAt string    `json:"committed_at"`
+	ArchiveURL  string    `json:"archive_url"`
+	HTMLURL     string    `json:"html_url"`
 	Releases    []Release `json:"releases"`
 	Sources     []string  `json:"sources"` // only on /messages/:b64id/commits
 }

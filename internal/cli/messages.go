@@ -73,6 +73,8 @@ func messageDetail(m api.MessageFull) {
 	pairs = append(pairs,
 		[2]string{"Sent at", m.SentAt},
 		[2]string{"Thread", m.ThreadID},
+		[2]string{"Archive", m.ArchiveURL},
+		[2]string{"Link", m.HTMLURL},
 	)
 	output.Detail(os.Stdout, pairs)
 	if len(m.Attachments) > 0 {
