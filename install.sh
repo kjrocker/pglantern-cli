@@ -3,6 +3,7 @@
 #
 #   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash
 #   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
+#   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-name pglantern
 #
 # This script never edits your shell rc files.
 set -eu
@@ -17,6 +18,7 @@ die() {
 }
 
 BIN_DIR=""
+BIN_NAME=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--bin-dir)
@@ -28,9 +30,18 @@ while [ $# -gt 0 ]; do
 		BIN_DIR="${1#--bin-dir=}"
 		shift
 		;;
+	--bin-name)
+		[ $# -ge 2 ] || die "--bin-name requires a name"
+		BIN_NAME="$2"
+		shift 2
+		;;
+	--bin-name=*)
+		BIN_NAME="${1#--bin-name=}"
+		shift
+		;;
 	-h | --help)
-		echo "usage: install.sh [--bin-dir <path>]"
-		echo "env: LANTERN_VERSION (e.g. v0.1.0), LANTERN_BIN_DIR"
+		echo "usage: install.sh [--bin-dir <path>] [--bin-name <name>]"
+		echo "env: LANTERN_VERSION (e.g. v0.1.0), LANTERN_BIN_DIR, LANTERN_BIN_NAME"
 		exit 0
 		;;
 	*)
@@ -81,6 +92,15 @@ if [ -z "$BIN_DIR" ]; then
 fi
 mkdir -p "$BIN_DIR" || die "cannot create $BIN_DIR"
 
+# The installed filename is configurable; use --bin-dir to choose the directory.
+if [ -z "$BIN_NAME" ]; then
+	BIN_NAME="${LANTERN_BIN_NAME:-lantern}"
+fi
+case "$BIN_NAME" in
+*/* | . | ..) die "--bin-name must be a plain filename, not a path: $BIN_NAME" ;;
+"") die "--bin-name must not be empty" ;;
+esac
+
 archive="lantern_${version}_${os}_${arch}.tar.gz"
 
 tmp="$(mktemp -d)"
@@ -118,9 +138,9 @@ fi
 # 6. Install.
 tar -xzf "$tmp/$archive" -C "$tmp" || die "could not extract $archive"
 [ -f "$tmp/lantern" ] || die "archive did not contain a lantern binary"
-install -m 0755 "$tmp/lantern" "$BIN_DIR/lantern" || die "could not install into $BIN_DIR"
+install -m 0755 "$tmp/lantern" "$BIN_DIR/$BIN_NAME" || die "could not install into $BIN_DIR"
 
-echo "installed $("$BIN_DIR/lantern" --version) to $BIN_DIR/lantern"
+echo "installed $("$BIN_DIR/$BIN_NAME" --version) to $BIN_DIR/$BIN_NAME"
 
 # 7. PATH check — we report, we do not edit rc files.
 case ":$PATH:" in
@@ -135,4 +155,4 @@ case ":$PATH:" in
 	;;
 esac
 
-echo "shell completion: lantern completion zsh|bash|fish|powershell"
+echo "shell completion: $BIN_NAME completion zsh|bash|fish|powershell"

@@ -16,6 +16,12 @@ Downloads the release binary to `~/.local/bin`, but the destination can be overr
 curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
 ```
 
+Installs as `lantern`, but the command name can be changed too — useful if that name is already taken:
+
+```sh
+curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-name pglantern
+```
+
 If you already have Go (1.24+) globally configured:
 
 ```sh
