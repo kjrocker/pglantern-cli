@@ -19,7 +19,8 @@ func newCommitsCmd() *cobra.Command {
 			if err := rejectPaginationWithIDs(cmd); err != nil {
 				return err
 			}
-			q := collectQuery(cmd, "q", "path", "author", "major", "from", "to", "limit", "after", "before")
+			q := collectQuery(cmd, "q", "path", "author", "major", "sort", "dir",
+				"from", "to", "limit", "after", "before")
 			ids, err := collectIDs(cmd, cmd.InOrStdin())
 			if err != nil {
 				return err
@@ -45,6 +46,8 @@ func newCommitsCmd() *cobra.Command {
 	cmd.Flags().String("major", "", "commits first shipped in this major (16, 9.6, master)")
 	cmd.Flags().String("from", "", "ISO-8601 lower bound on committed_at")
 	cmd.Flags().String("to", "", "ISO-8601 upper bound on committed_at")
+	addEnumFlag(cmd, "sort", "sort key", "committed", "authored")
+	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	addPaginationFlags(cmd)
 	addIDFlag(cmd, "fetch exactly this commit (full 40-hex sha, no prefixes)")
 
