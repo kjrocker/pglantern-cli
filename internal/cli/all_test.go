@@ -44,6 +44,21 @@ func captureStderr(t *testing.T, fn func()) string {
 	return string(b)
 }
 
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	fn()
+	w.Close()
+	os.Stdout = orig
+	b, _ := io.ReadAll(r)
+	return string(b)
+}
+
 // pagedServer serves total rows in pages of the requested limit, minting
 // numeric cursors, and records each request's limit and after params.
 func pagedServer(t *testing.T, total int, gotLimits, gotAfters *[]string) *httptest.Server {

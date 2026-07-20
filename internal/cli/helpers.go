@@ -187,6 +187,66 @@ func argError(cmd *cobra.Command, what string) error {
 	return usagef("%s requires %s\n\nUsage:\n  %s", cmd.CommandPath(), what, cmd.UseLine())
 }
 
+// addOpenFlags registers the flags shared by every `open` subcommand: --site
+// targets our own browse page instead of the upstream archive, --print emits
+// the resolved URL instead of launching a browser.
+func addOpenFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("site", false, "open the pgLantern page instead of the upstream archive page")
+	cmd.Flags().Bool("print", false, "print the resolved URL instead of opening a browser")
+}
+
+// openURL picks the archive or --site URL, then either prints it (--print, or
+// as a copyable fallback when no opener exists) or launches the browser. On a
+// successful launch it notes `# opening <url>` on stderr, matching the
+// EmptyNote/CursorFooter stderr-note convention so stdout stays pipe-clean.
+func openURL(cmd *cobra.Command, archiveURL, siteURL string) error {
+	target := archiveURL
+	if site, _ := cmd.Flags().GetBool("site"); site {
+		target = siteURL
+	}
+	if pr, _ := cmd.Flags().GetBool("print"); pr {
+		fmt.Fprintln(os.Stdout, target)
+		return nil
+	}
+	if err := output.OpenBrowser(target); err != nil {
+		// No opener (headless/CI/SSH) — print the URL so it's still copyable,
+		// and surface the failure as a non-zero exit.
+		fmt.Fprintln(os.Stdout, target)
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "# opening %s\n", target)
+	return nil
+}
+
+// hostFor resolves the API host for building --site URLs. Offline — config is a
+// local file and no key is required, since open makes no request in the
+// client-side path.
+func hostFor(cmd *cobra.Command) string {
+	cfg, _ := config.Load()
+	return resolveHost(cmd, cfg)
+}
+
+// getOpen fetches path, decodes into api.Item[T], picks the (archive, site) URL
+// pair off the decoded item, and opens it. Used only by the commit-prefix
+// branch of `commits open`, where a short sha must be resolved server-side.
+// Ignores --json: open is an action, not a data command.
+func getOpen[T any](cmd *cobra.Command, path string, pick func(T) (archiveURL, siteURL string)) error {
+	client, err := clientFrom(cmd)
+	if err != nil {
+		return err
+	}
+	body, err := client.Get(path, nil)
+	if err != nil {
+		return err
+	}
+	var item api.Item[T]
+	if err := json.Unmarshal(body, &item); err != nil {
+		return fmt.Errorf("decoding response: %w", err)
+	}
+	archiveURL, siteURL := pick(item.Data)
+	return openURL(cmd, archiveURL, siteURL)
+}
+
 // enumFlag is a pflag.Value that rejects values outside its allowed set at
 // parse time.
 type enumFlag struct {

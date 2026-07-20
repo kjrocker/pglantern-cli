@@ -56,7 +56,27 @@ func newCommitsCmd() *cobra.Command {
 	addPaginationFlags(cmd)
 	addIDFlag(cmd, "fetch exactly this commit (full 40-hex sha, no prefixes)")
 
-	cmd.AddCommand(newCommitsGetCmd(), newCommitsThreadCmd())
+	cmd.AddCommand(newCommitsGetCmd(), newCommitsOpenCmd(), newCommitsThreadCmd())
+	return cmd
+}
+
+func newCommitsOpenCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "open <sha>",
+		Short: "Open a commit's upstream archive page (--site for the pgLantern page)",
+		Args:  requireArg("a commit sha"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sha := args[0]
+			if isFullSHA(sha) { // no API call — build the URL locally
+				host := hostFor(cmd)
+				return openURL(cmd, commitArchiveURL(sha), commitSiteURL(host, sha))
+			}
+			// Short/incomplete sha → resolve server-side, use its canonical URLs.
+			return getOpen(cmd, "/commits/"+url.PathEscape(sha),
+				func(c api.CommitFull) (string, string) { return c.ArchiveURL, c.HTMLURL })
+		},
+	}
+	addOpenFlags(cmd)
 	return cmd
 }
 

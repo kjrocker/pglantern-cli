@@ -55,6 +55,7 @@ The API key and the host can be passed per-command with `--api-key` / `--host` f
 lantern lists
 lantern messages --list pgsql-hackers --limit 10
 lantern messages get '<message-id>'     # raw Message-Id, straight from a table row
+lantern messages open '<message-id>'    # jump to the upstream archive page (--site for pgLantern)
 lantern messages thread '<message-id>'
 lantern search vacuum full --committed --major 17
 lantern search vacuum --sort sent_at --dir asc  # oldest matching first
@@ -67,6 +68,7 @@ lantern attachments patch 1234          # parsed patch summary
 lantern commits --q "shared_buffers" --path src/backend/access/ --major 16
 lantern commits --sort authored --dir asc      # oldest author date first
 lantern commits get <sha>               # full 40-hex sha
+lantern commits open <sha>              # jump to the upstream commit page (--site for pgLantern)
 lantern commits thread <sha>            # the discussion behind a commit
 lantern analytics messages --interval month --cumulative
 lantern analytics top-senders -n 10 --from 2025-01-01
