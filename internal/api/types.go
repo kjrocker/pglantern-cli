@@ -158,12 +158,13 @@ type ThreadSummary struct {
 }
 
 type AttachmentRow struct {
-	ID          int     `json:"id"`
-	Filename    string  `json:"filename"`
-	ContentType string  `json:"content_type"`
-	Size        int     `json:"size"`
-	MessageID   *string `json:"message_id"`
-	IsPatch     bool    `json:"is_patch"`
+	ID            int     `json:"id"`
+	Filename      string  `json:"filename"`
+	ContentType   string  `json:"content_type"`
+	Size          int     `json:"size"`
+	MessageID     *string `json:"message_id"`
+	MessageSentAt *string `json:"message_sent_at"`
+	IsPatch       bool    `json:"is_patch"`
 }
 
 type PatchFile struct {

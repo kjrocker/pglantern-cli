@@ -57,10 +57,12 @@ lantern messages --list pgsql-hackers --limit 10
 lantern messages get '<message-id>'     # raw Message-Id, straight from a table row
 lantern messages thread '<message-id>'
 lantern search vacuum full --committed --major 17
+lantern search vacuum --sort sent_at --dir asc  # oldest matching first
 lantern senders --sort messages --dir desc
 lantern senders get 42
 lantern threads vacuum --from 2024-01-01       # discussion threads, newest activity first
 lantern threads --sort messages --dir desc     # busiest threads first
+lantern attachments --sort size         # biggest first; also --sort date
 lantern attachments patch 1234          # parsed patch summary
 lantern commits --q "shared_buffers" --path src/backend/access/ --major 16
 lantern commits --sort authored --dir asc      # oldest author date first
