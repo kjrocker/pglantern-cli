@@ -202,10 +202,27 @@ func newMessagesCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		newMessagesGetCmd(),
+		newMessagesOpenCmd(),
 		newMessagesThreadCmd(),
 		newMessagesCommitsCmd(),
 		newMessagesRefsCmd(),
 	)
+	return cmd
+}
+
+func newMessagesOpenCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "open <message-id>",
+		Short: "Open a message's upstream archive page (--site for the pgLantern page)",
+		Args:  requireArg("a message id"),
+		// Always client-side — a Message-Id builds a URL with no round-trip.
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id := normalizeMessageID(args[0])
+			host := hostFor(cmd)
+			return openURL(cmd, messageArchiveURL(id), messageSiteURL(host, id))
+		},
+	}
+	addOpenFlags(cmd)
 	return cmd
 }
 

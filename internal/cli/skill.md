@@ -90,6 +90,7 @@ Start from whichever entity the question is about:
 | What lists exist? | `lantern lists` |
 | Recent/filtered messages | `lantern messages --list pgsql-hackers --limit 10` |
 | One message (+ body, attachments) | `lantern messages get '<message-id>'` |
+| Open a message's archive page in a browser | `lantern messages open '<message-id>'` |
 | Many messages with bodies, one request | `lantern messages --full --id -` |
 | The whole thread around it | `lantern messages thread '<message-id>'` |
 | Commits that landed from its thread | `lantern messages commits '<message-id>'` |
@@ -105,6 +106,7 @@ Start from whichever entity the question is about:
 | One person + recent messages | `lantern senders get 42` |
 | Commits by path/author/major | `lantern commits --path src/backend/access/ --major 16` |
 | One commit (+ files, releases) | `lantern commits get <sha-or-prefix>` |
+| Open a commit's archive page in a browser | `lantern commits open <sha-or-prefix>` |
 | **The discussion behind a commit** | `lantern commits thread <sha>` |
 | Attachments / parsed patch summary | `lantern attachments`, `lantern attachments patch 1234` |
 | Majors and releases | `lantern versions` |
@@ -130,6 +132,13 @@ under `--sort authored` the date column shows the author date instead).
 `commits get` takes a full 40-hex sha **or**
 any unambiguous prefix (≥ 4 hex, git-style); an ambiguous prefix errors and
 asks for more characters.
+
+`messages open` / `commits open` launch the entity's **upstream** archive page
+(`postgr.es/m/…`, `postgr.es/c/…`) in the default browser; `--site` opens the
+pgLantern page instead, and `--print` emits the resolved URL to stdout rather
+than opening anything (use it in headless/SSH/CI). A Message-Id and a full
+40-hex sha are turned into a URL locally with no request; only a **short sha
+prefix** calls the API, to resolve it server-side.
 
 The `analytics` subcommands are bounded aggregates — no cursors, no
 pagination flags. The two series (`messages`, `senders`) take `--interval

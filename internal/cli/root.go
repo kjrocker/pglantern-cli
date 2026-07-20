@@ -43,7 +43,7 @@ func NewRootCmd() *cobra.Command {
 			return
 		}
 		switch cmd.Name() {
-		case "login", "logout", "generate-skill":
+		case "login", "logout", "generate-skill", "open":
 			return
 		}
 		output.StartPager()
