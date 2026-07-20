@@ -125,7 +125,8 @@ leave both unset to keep it). `search` adds `--list`, `--sender`,
 `sent_at`). `senders` adds `--list` (scopes both the people and their stats to
 that list). `commits` adds `--q` (substring over the commit message),
 `--path`, `--author`, `--major`, and its own sort pair: `--sort
-committed|authored` with `--dir asc|desc` (server default `committed`/`desc`).
+committed|authored` with `--dir asc|desc` (server default `committed`/`desc`;
+under `--sort authored` the date column shows the author date instead).
 `commits get` takes a full 40-hex sha **or**
 any unambiguous prefix (≥ 4 hex, git-style); an ambiguous prefix errors and
 asks for more characters.

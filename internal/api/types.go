@@ -72,6 +72,7 @@ type CommitSummary struct {
 	AuthorName  string    `json:"author_name"`
 	AuthorEmail string    `json:"author_email"`
 	CommittedAt string    `json:"committed_at"`
+	AuthoredAt  string    `json:"authored_at"`
 	ArchiveURL  string    `json:"archive_url"`
 	HTMLURL     string    `json:"html_url"`
 	Releases    []Release `json:"releases"`
@@ -93,7 +94,6 @@ type Trailer struct {
 type CommitFull struct {
 	CommitSummary
 	Body           string       `json:"body"`
-	AuthoredAt     string       `json:"authored_at"`
 	CommitterName  string       `json:"committer_name"`
 	CommitterEmail string       `json:"committer_email"`
 	Trailers       []Trailer    `json:"trailers"`
