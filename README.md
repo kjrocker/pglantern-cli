@@ -63,6 +63,7 @@ lantern threads vacuum --from 2024-01-01       # discussion threads, newest acti
 lantern threads --sort messages --dir desc     # busiest threads first
 lantern attachments patch 1234          # parsed patch summary
 lantern commits --q "shared_buffers" --path src/backend/access/ --major 16
+lantern commits --sort authored --dir asc      # oldest author date first
 lantern commits get <sha>               # full 40-hex sha
 lantern commits thread <sha>            # the discussion behind a commit
 lantern analytics messages --interval month --cumulative

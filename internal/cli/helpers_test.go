@@ -123,6 +123,20 @@ func TestThreadsSortEnum(t *testing.T) {
 	}
 }
 
+func TestCommitsSortEnum(t *testing.T) {
+	// A known-bad --sort fails at parse time, before any HTTP call.
+	if err := newCommitsCmd().Flags().Parse([]string{"--sort", "banana"}); err == nil {
+		t.Error("invalid --sort accepted")
+	}
+	if err := newCommitsCmd().Flags().Parse([]string{"--dir", "sideways"}); err == nil {
+		t.Error("invalid --dir accepted")
+	}
+	// Valid values parse cleanly.
+	if err := newCommitsCmd().Flags().Parse([]string{"--sort", "authored", "--dir", "asc"}); err != nil {
+		t.Errorf("valid sort flags rejected: %v", err)
+	}
+}
+
 // idCmd is a bare command carrying the flags exact-ids mode interacts with.
 func idCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "test"}
