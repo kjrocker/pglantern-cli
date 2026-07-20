@@ -16,7 +16,7 @@ func newAttachmentsCmd() *cobra.Command {
 		Short: "Browse message attachments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := collectQuery(cmd, "limit", "after", "before")
+			q := collectQuery(cmd, "sort", "dir", "limit", "after", "before")
 			return getRenderPage(cmd, "/attachments", q, func(page api.Page[api.AttachmentRow]) {
 				if len(page.Data) == 0 {
 					output.EmptyNote("no results")
@@ -26,15 +26,18 @@ func newAttachmentsCmd() *cobra.Command {
 				for _, a := range page.Data {
 					rows = append(rows, []string{
 						strconv.Itoa(a.ID), output.Truncate(a.Filename, 40), a.ContentType,
-						output.HumanBytes(int64(a.Size)), patchCell(a.IsPatch), output.OrDash(a.MessageID),
+						output.HumanBytes(int64(a.Size)), patchCell(a.IsPatch),
+						output.OrDash(a.MessageSentAt), output.OrDash(a.MessageID),
 					})
 				}
 				output.Table(os.Stdout,
-					[]string{"ID", "FILENAME", "TYPE", "SIZE", "PATCH", "MESSAGE-ID"}, rows)
+					[]string{"ID", "FILENAME", "TYPE", "SIZE", "PATCH", "SENT AT", "MESSAGE-ID"}, rows)
 				output.CursorFooter(page.NextCursor)
 			})
 		},
 	}
+	addEnumFlag(cmd, "sort", "sort key (default newest first)", "date", "size")
+	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	addPaginationFlags(cmd)
 
 	cmd.AddCommand(newAttachmentsGetCmd(), newAttachmentsPatchCmd())
@@ -69,6 +72,7 @@ func newAttachmentsGetCmd() *cobra.Command {
 						{"Size", output.HumanBytes(int64(a.Size))},
 						{"Patch", strconv.FormatBool(a.IsPatch)},
 						{"Message-Id", output.OrDash(a.MessageID)},
+						{"Sent", output.OrDash(a.MessageSentAt)},
 					})
 				})
 		},

@@ -13,7 +13,7 @@ func newSearchCmd() *cobra.Command {
 		Args:  requireArgs("a search query"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd,
-				"list", "sort", "sender", "committed", "path", "major",
+				"list", "sort", "dir", "sender", "committed", "path", "major",
 				"from", "to", "limit", "after", "before")
 			q.Set("q", strings.Join(args, " "))
 			return renderMessagePage(cmd, "/search", q, true)
@@ -21,6 +21,7 @@ func newSearchCmd() *cobra.Command {
 	}
 	cmd.Flags().String("list", "", "restrict to one mailing list by name")
 	addEnumFlag(cmd, "sort", "sort order", "relevance", "sent_at")
+	addEnumFlag(cmd, "dir", "sort direction, only with --sort sent_at", "asc", "desc")
 	cmd.Flags().String("sender", "", "substring match on sender email or name")
 	cmd.Flags().Bool("committed", false, "only threads with a landed commit")
 	cmd.Flags().String("path", "", "threads whose landed commit or patch touches this path prefix")
