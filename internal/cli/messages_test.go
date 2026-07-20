@@ -71,6 +71,33 @@ func TestCommitHeaderMatchesRows(t *testing.T) {
 	}
 }
 
+// `commits --sort authored` swaps the date column, so its header and rows have
+// to stay paired too — and must show authored_at, not committed_at.
+func TestAuthoredCommitHeaderMatchesRows(t *testing.T) {
+	rows := authoredCommitRows([]api.CommitSummary{{
+		SHA:         "abc123",
+		AuthorName:  "Tom Lane",
+		AuthorEmail: "tgl@sss.pgh.pa.us",
+		CommittedAt: "2026-01-02T03:04:05Z",
+		AuthoredAt:  "2025-12-24T09:30:00Z",
+		Subject:     "Fix planner",
+	}})
+	if len(rows) != 1 || len(rows[0]) != len(authoredCommitHeader) {
+		t.Fatalf("rows %v vs header %v: length mismatch", rows, authoredCommitHeader)
+	}
+	want := map[string]string{
+		"SHA":         "abc123",
+		"AUTHOR":      "Tom Lane <tgl@sss.pgh.pa.us>",
+		"AUTHORED AT": "2025-12-24T09:30:00Z",
+		"SUBJECT":     "Fix planner",
+	}
+	for i, h := range authoredCommitHeader {
+		if rows[0][i] != want[h] {
+			t.Errorf("column %s = %q, want %q", h, rows[0][i], want[h])
+		}
+	}
+}
+
 func TestNormalizeMessageID(t *testing.T) {
 	tests := []struct {
 		name string

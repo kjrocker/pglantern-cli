@@ -35,7 +35,12 @@ func newCommitsCmd() *cobra.Command {
 					output.EmptyNote("no results")
 					return
 				}
-				output.Table(os.Stdout, commitHeader, commitRows(page.Data))
+				// Show the date the server ordered by.
+				if cmd.Flags().Lookup("sort").Value.String() == "authored" {
+					output.Table(os.Stdout, authoredCommitHeader, authoredCommitRows(page.Data))
+				} else {
+					output.Table(os.Stdout, commitHeader, commitRows(page.Data))
+				}
 				output.CursorFooter(page.NextCursor)
 			})
 		},

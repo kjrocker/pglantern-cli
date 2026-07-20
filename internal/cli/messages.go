@@ -141,15 +141,31 @@ func patchCell(isPatch bool) string {
 
 // commitHeader names the columns in the order commitRows emits them. Every
 // commit table must use the pair together so header and rows can't drift.
-var commitHeader = []string{"SHA", "AUTHOR", "COMMITTED AT", "SUBJECT"}
+var commitHeader = commitHeaderFor("COMMITTED AT")
+
+// authoredCommitHeader pairs with authoredCommitRows: `commits --sort authored`
+// shows the date it ordered by, not the one it didn't.
+var authoredCommitHeader = commitHeaderFor("AUTHORED AT")
+
+func commitHeaderFor(date string) []string {
+	return []string{"SHA", "AUTHOR", date, "SUBJECT"}
+}
 
 func commitRows(commits []api.CommitSummary) [][]string {
+	return commitRowsOn(commits, func(c api.CommitSummary) string { return c.CommittedAt })
+}
+
+func authoredCommitRows(commits []api.CommitSummary) [][]string {
+	return commitRowsOn(commits, func(c api.CommitSummary) string { return c.AuthoredAt })
+}
+
+func commitRowsOn(commits []api.CommitSummary, date func(api.CommitSummary) string) [][]string {
 	rows := make([][]string, 0, len(commits))
 	for _, c := range commits {
 		rows = append(rows, []string{
 			c.SHA,
 			output.Truncate(fmt.Sprintf("%s <%s>", c.AuthorName, c.AuthorEmail), 40),
-			c.CommittedAt,
+			date(c),
 			output.Truncate(c.Subject, 64),
 		})
 	}
