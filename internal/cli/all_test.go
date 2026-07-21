@@ -258,6 +258,62 @@ func TestAllFlagConflicts(t *testing.T) {
 	}
 }
 
+// keylessCmd is a bare command with a host but no api-key set, for exercising
+// the anonymous-tier path where nothing resolves a key.
+func keylessCmd(host string) *cobra.Command {
+	cmd := &cobra.Command{Use: "test"}
+	cmd.Flags().Bool("json", false, "")
+	cmd.Flags().String("host", host, "")
+	cmd.Flags().String("api-key", "", "")
+	return cmd
+}
+
+func TestClientFromNoKeySucceeds(t *testing.T) {
+	// Isolate config: point UserConfigDir at an empty temp dir and clear the
+	// env key, so nothing resolves a key.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("LANTERN_API_KEY", "")
+	t.Setenv("LANTERN_HOST", "")
+
+	cmd := keylessCmd("http://unused.invalid")
+	client, err := clientFrom(cmd)
+	if err != nil {
+		t.Fatalf("clientFrom errored with no key: %v", err)
+	}
+	if client == nil {
+		t.Fatal("clientFrom returned nil client")
+	}
+	if client.Key != "" {
+		t.Errorf("client key = %q, want empty", client.Key)
+	}
+}
+
+func TestKeylessRequestSendsNoAuthHeader(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("LANTERN_API_KEY", "")
+	t.Setenv("LANTERN_HOST", "")
+
+	var hadAuth bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, hadAuth = r.Header["Authorization"]
+		fmt.Fprint(w, `{"data":[]}`)
+	}))
+	defer srv.Close()
+
+	cmd := keylessCmd(srv.URL)
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	captureStdout(t, func() {
+		if err := getRender(cmd, "/lists", url.Values{}, func(api.Page[row]) {}); err != nil {
+			t.Error(err)
+		}
+	})
+	if hadAuth {
+		t.Error("keyless request sent an Authorization header")
+	}
+}
+
 func TestPositionalQuery(t *testing.T) {
 	newCmd := func() *cobra.Command {
 		cmd := &cobra.Command{Use: "threads"}

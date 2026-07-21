@@ -40,11 +40,12 @@ directory isn't on your `PATH`, the script prints the `export` line to add. With
 Go 1.24+, `go install codeberg.org/kehvyn/pglantern-cli@latest` works too. Confirm
 it's live with `lantern --version`.
 
-Then authenticate. The CLI defaults to the hosted archive at
-`https://pglantern.com`, so you only need a key. API keys are minted in the
-pgLantern web UI under `/users/api-keys`; `lantern login` prompts for one, validates
-it against the server, and saves the key + host to `~/.config/lantern/config.json`
-(mode 0600):
+A key is optional. The CLI defaults to the hosted archive at
+`https://pglantern.com`, and with no key configured it runs on the anonymous
+per-IP tier — every command works out of the box. A key only raises the rate
+limits. API keys are minted in the pgLantern web UI under `/users/api-keys`;
+`lantern login` prompts for one, validates it against the server, and saves the
+key + host to `~/.config/lantern/config.json` (mode 0600):
 
 ```sh
 lantern login                                           # hosted archive
@@ -370,10 +371,13 @@ it off in a terminal.
 
 ## Troubleshooting
 
-- `no API key: run 'lantern login'…` — nothing resolved a key; run `lantern login`
-  or export `$LANTERN_API_KEY` (see Setup).
 - `A valid API key is required.` — a key was sent and the **server** rejected it.
-  Mint a fresh one in the web UI under `/users/api-keys` and `lantern login` again.
+  A key is optional (no key runs on the anonymous tier), so if you don't need
+  the higher limits, `lantern logout` to drop the bad key; otherwise mint a
+  fresh one in the web UI under `/users/api-keys` and `lantern login` again.
+- `daily request quota exceeded` / `burst rate limit exceeded` (429) — the
+  anonymous per-IP tier is capped (per-minute and per-day). Log in with a key to
+  raise the limits.
 - `connection refused` / dial errors — nothing is listening at the host you
   targeted. With no host set the CLI defaults to the hosted archive at
   `https://pglantern.com`; if you're pointing at a self-hosted deployment,
