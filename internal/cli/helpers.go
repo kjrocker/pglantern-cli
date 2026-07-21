@@ -44,16 +44,16 @@ func resolveKey(cmd *cobra.Command, cfg config.Config) string {
 	return cfg.APIKey
 }
 
+// clientFrom builds the API client from resolved host and key. The key is
+// optional: when none resolves, resolveKey returns "" and the client makes
+// anonymous-tier requests (no Authorization header). A key only raises the
+// rate limits.
 func clientFrom(cmd *cobra.Command) (*api.Client, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, err
 	}
-	key := resolveKey(cmd, cfg)
-	if key == "" {
-		return nil, fmt.Errorf("no API key: run `lantern login`, set $LANTERN_API_KEY, or pass --api-key")
-	}
-	return api.New(resolveHost(cmd, cfg), key), nil
+	return api.New(resolveHost(cmd, cfg), resolveKey(cmd, cfg)), nil
 }
 
 // collectQuery builds query params from the named flags the user actually

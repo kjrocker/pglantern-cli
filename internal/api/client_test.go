@@ -122,6 +122,27 @@ func TestClientGet(t *testing.T) {
 	}
 }
 
+func TestClientGetNoKeyOmitsAuthHeader(t *testing.T) {
+	// A client built with an empty key must send NO Authorization header, so the
+	// server serves the anonymous per-IP tier. An empty `Bearer ` would instead
+	// be read as an invalid key and 401.
+	var gotAuth string
+	var hadAuth bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, hadAuth = r.Header["Authorization"]
+		gotAuth = r.Header.Get("Authorization")
+		w.Write([]byte(`{"data":[]}`))
+	}))
+	defer srv.Close()
+
+	if _, err := New(srv.URL, "").Get("/lists", nil); err != nil {
+		t.Fatal(err)
+	}
+	if hadAuth {
+		t.Errorf("Authorization header present with empty key: %q", gotAuth)
+	}
+}
+
 func TestClientGetExactIDs(t *testing.T) {
 	// Exact-ids mode goes over the wire as repeated `ids[]=` (percent-encoded),
 	// which is the only form Plug keeps as a list.

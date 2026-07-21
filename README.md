@@ -37,7 +37,10 @@ go build -o lantern .
 
 ## Login
 
-API keys are minted in the pgLantern web UI under `/users/api-keys`.
+No key required. With none configured, the CLI runs on the anonymous per-IP
+tier and every command works out of the box. A key only raises the rate limits
+— mint one in the pgLantern web UI under `/users/api-keys` and `lantern login`
+to save it.
 
 ```sh
 lantern login                       # prompts for the key, validates, saves

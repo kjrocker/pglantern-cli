@@ -106,7 +106,10 @@ func New(baseURL, key string) *Client {
 }
 
 // Get requests /api/v1/<path> and returns the raw response body. Non-2xx
-// responses come back as *Error.
+// responses come back as *Error. A client with an empty Key omits the
+// Authorization header entirely, so the server serves the request on its
+// anonymous per-IP tier — sending an empty `Bearer ` token would instead be
+// rejected as an invalid key.
 func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 	u := c.BaseURL + apiPrefix + path
 	if len(query) > 0 {
@@ -116,7 +119,9 @@ func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.Key)
+	if c.Key != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Key)
+	}
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.HTTP.Do(req)
