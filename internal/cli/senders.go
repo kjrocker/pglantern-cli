@@ -17,6 +17,14 @@ func senderStatCells(s *api.SenderStats) (count, first, last string) {
 	return strconv.Itoa(s.MessageCount), output.OrDash(s.FirstMessageAt), output.OrDash(s.LastMessageAt)
 }
 
+// senderStatIDs renders the boundary Message-Id handles for the detail view.
+func senderStatIDs(s *api.SenderStats) (firstID, lastID string) {
+	if s == nil {
+		return "-", "-"
+	}
+	return output.OrDash(s.FirstMessageID), output.OrDash(s.LastMessageID)
+}
+
 func newSendersCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "senders [query...]",
@@ -83,13 +91,16 @@ func newSendersGetCmd() *cobra.Command {
 				func(item api.Item[api.SenderFull]) {
 					s := item.Data
 					count, first, last := senderStatCells(s.Stats)
+					firstID, lastID := senderStatIDs(s.Stats)
 					output.Detail(os.Stdout, [][2]string{
 						{"Id", strconv.Itoa(s.ID)},
 						{"Name", s.DisplayName},
 						{"Email", s.Email},
 						{"Messages", count},
 						{"First", first},
+						{"First message", firstID},
 						{"Last", last},
+						{"Last message", lastID},
 					})
 					if len(s.Messages) > 0 {
 						fmt.Println()

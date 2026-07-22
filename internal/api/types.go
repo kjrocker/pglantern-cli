@@ -120,7 +120,9 @@ type CommitThread struct {
 type SenderStats struct {
 	MessageCount   int     `json:"message_count"`
 	FirstMessageAt *string `json:"first_message_at"`
+	FirstMessageID *string `json:"first_message_id"`
 	LastMessageAt  *string `json:"last_message_at"`
+	LastMessageID  *string `json:"last_message_id"`
 }
 
 type SenderSummary struct {
@@ -154,6 +156,7 @@ type ThreadSummary struct {
 	MessageCount   int            `json:"message_count"`
 	StartedAt      string         `json:"started_at"`
 	LastActivityAt string         `json:"last_activity_at"`
+	LastMessageID  *string        `json:"last_message_id"`
 	Starter        *ThreadStarter `json:"starter"`
 }
 
