@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 
@@ -10,15 +9,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// threadStarterCell renders the "who kicked it off" column as "Name <email>",
-// matching the From column elsewhere: both parts if we have them, else the bare
-// email, else a dash for threads with no ingested start.
+// threadStarterCell renders the "who kicked it off" column as the starter's
+// display name, matching the From column elsewhere: the name if we have it, else
+// the bare email, else a dash for threads with no ingested start.
 func threadStarterCell(s *api.ThreadStarter) string {
 	if s == nil || s.Sender == nil {
 		return "-"
 	}
-	if s.Sender.DisplayName != "" && s.Sender.Email != "" {
-		return fmt.Sprintf("%s <%s>", s.Sender.DisplayName, s.Sender.Email)
+	if s.Sender.DisplayName != "" {
+		return s.Sender.DisplayName
 	}
 	return output.OrDash(&s.Sender.Email)
 }

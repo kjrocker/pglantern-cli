@@ -13,12 +13,12 @@ func TestSenderDisplay(t *testing.T) {
 		want string
 	}{
 		{
-			name: "preloaded sender assembles Name <email>",
+			name: "preloaded sender renders the display name, not the address",
 			msg: api.MessageSummary{
 				FromRaw: "tgl@sss.pgh.pa.us",
 				Sender:  &api.Sender{Email: "tgl@sss.pgh.pa.us", DisplayName: "Tom Lane"},
 			},
-			want: "Tom Lane <tgl@sss.pgh.pa.us>",
+			want: "Tom Lane",
 		},
 		{
 			name: "preloaded sender with no display name degrades to email",
