@@ -24,17 +24,19 @@ func messagePath(arg string, suffix string) string {
 	return "/messages/" + url.PathEscape(normalizeMessageID(arg)) + suffix
 }
 
-// senderDisplay renders the "From" column as "Name <email>". The thread and
-// single-message endpoints preload the sender, so we assemble that form from
-// its parts (display name + email); search doesn't preload it, so we fall back
-// to from_raw, which the archive already stores in the same "Name <email>"
-// form. A preloaded sender with no display name degrades to the bare email.
+// senderDisplay renders the "From" column as the sender's display name — the
+// table deliberately carries no email address; --json and --full still do. Every
+// summary-returning endpoint preloads the sender, so the display name is
+// normally there; a sender with no display name degrades to the bare email, and
+// from_raw is a defensive fallback for a summary with no sender at all.
 func senderDisplay(m api.MessageSummary) string {
-	if m.Sender != nil && m.Sender.Email != "" {
+	if m.Sender != nil {
 		if m.Sender.DisplayName != "" {
-			return fmt.Sprintf("%s <%s>", m.Sender.DisplayName, m.Sender.Email)
+			return m.Sender.DisplayName
 		}
-		return m.Sender.Email
+		if m.Sender.Email != "" {
+			return m.Sender.Email
+		}
 	}
 	return m.FromRaw
 }
