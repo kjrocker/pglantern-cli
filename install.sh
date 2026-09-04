@@ -1,16 +1,16 @@
 #!/bin/sh
 # Install the lantern CLI into ~/.local/bin (override with --bin-dir or $LANTERN_BIN_DIR).
 #
-#   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash
-#   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
-#   curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-name pglantern
+#   curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash -s -- --bin-dir /usr/local/bin
+#   curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash -s -- --bin-name pglantern
 #
 # This script never edits your shell rc files.
 set -eu
 
-REPO="kehvyn/pglantern-cli"
-API="https://codeberg.org/api/v1/repos/$REPO"
-DOWNLOAD="https://codeberg.org/$REPO/releases/download"
+REPO="kjrocker/pglantern-cli"
+API="https://api.github.com/repos/$REPO"
+DOWNLOAD="https://github.com/$REPO/releases/download"
 
 die() {
 	echo "install.sh: $*" >&2
@@ -54,13 +54,13 @@ done
 case "$(uname -s)" in
 Linux) os="linux" ;;
 Darwin) os="darwin" ;;
-*) die "no prebuilt binaries for $(uname -s); build from source: https://codeberg.org/$REPO#install" ;;
+*) die "no prebuilt binaries for $(uname -s); build from source: https://github.com/$REPO#install" ;;
 esac
 
 case "$(uname -m)" in
 x86_64) arch="amd64" ;;
 aarch64 | arm64) arch="arm64" ;;
-*) die "unsupported architecture: $(uname -m); build from source: https://codeberg.org/$REPO#install" ;;
+*) die "unsupported architecture: $(uname -m); build from source: https://github.com/$REPO#install" ;;
 esac
 
 # 2. Fetch helpers.

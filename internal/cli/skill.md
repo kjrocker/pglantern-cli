@@ -32,13 +32,12 @@ so you can explore freely.
 install it:
 
 ```sh
-curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash
 ```
 
 That drops the binary into `~/.local/bin` and edits no shell rc files; if that
-directory isn't on your `PATH`, the script prints the `export` line to add. With
-Go 1.24+, `go install codeberg.org/kehvyn/pglantern-cli@latest` works too. Confirm
-it's live with `lantern --version`.
+directory isn't on your `PATH`, the script prints the `export` line to add.
+Confirm it's live with `lantern --version`.
 
 A key is optional. The CLI defaults to the hosted archive at
 `https://pglantern.com`, and with no key configured it runs on the anonymous
