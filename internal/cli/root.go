@@ -43,8 +43,14 @@ func NewRootCmd() *cobra.Command {
 			return
 		}
 		switch cmd.Name() {
-		case "login", "logout", "generate-skill", "open":
+		case "login", "logout", "open":
 			return
+		case "skill":
+			// The stdout form is pageable like any other render; -o writes a
+			// file and reports on stderr, so paging it would show a blank screen.
+			if out, _ := cmd.Flags().GetString("output"); out != "" {
+				return
+			}
 		}
 		output.StartPager()
 	}
@@ -67,7 +73,7 @@ func NewRootCmd() *cobra.Command {
 		newImportsCmd(),
 		newAnalyticsCmd(),
 		newAPICmd(),
-		newGenerateSkillCmd(),
+		newSkillCmd(),
 	)
 
 	wrapArgsErrors(root)
