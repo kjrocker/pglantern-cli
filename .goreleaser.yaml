@@ -23,7 +23,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X codeberg.org/kehvyn/pglantern-cli/internal/cli.version={{ .Version }}
+      - -s -w -X git.kehvyn.dev/kevin/pglantern-cli/internal/cli.version={{ .Version }}
 
 archives:
   - id: lantern

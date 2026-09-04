@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
 	"github.com/spf13/cobra"
 )
 

@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/api"
-	"codeberg.org/kehvyn/pglantern-cli/internal/config"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

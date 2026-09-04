@@ -1,4 +1,4 @@
-module codeberg.org/kehvyn/pglantern-cli
+module git.kehvyn.dev/kevin/pglantern-cli
 
 go 1.24.13
 

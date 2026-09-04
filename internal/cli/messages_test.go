@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
 )
 
 func TestSenderDisplay(t *testing.T) {
