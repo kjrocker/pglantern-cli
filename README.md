@@ -7,28 +7,22 @@ A basic passthrough client that exists so that we don't have to `curl` the pgLan
 ## Install
 
 ```sh
-curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash
 ```
 
 Downloads the release binary to `~/.local/bin`, but the destination can be overridden if you'd prefer:
 
 ```sh
-curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-dir /usr/local/bin
+curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash -s -- --bin-dir /usr/local/bin
 ```
 
 Installs as `lantern`, but the command name can be changed too — useful if that name is already taken:
 
 ```sh
-curl -fsSL https://codeberg.org/kehvyn/pglantern-cli/raw/branch/main/install.sh | bash -s -- --bin-name pglantern
+curl -fsSL https://raw.githubusercontent.com/kjrocker/pglantern-cli/main/install.sh | bash -s -- --bin-name pglantern
 ```
 
-If you already have Go (1.24+) globally configured:
-
-```sh
-go install codeberg.org/kehvyn/pglantern-cli@latest
-```
-
-Or from source, with [mise](https://mise.jdx.dev):
+From source, with [mise](https://mise.jdx.dev):
 
 ```sh
 mise install
@@ -145,12 +139,12 @@ Maintainer-facing. Releases are built and published from a local machine — the
 
 ```sh
 mise install                  # go + goreleaser
-cp .env.example .env          # then fill in GITEA_TOKEN
+cp .env.example .env          # then fill in GITHUB_TOKEN
 make release-dry              # build all four archives into dist/, publish nothing
-make release TAG=v0.3.0       # test, tag, push, publish to Codeberg
+make release TAG=v0.3.0       # test, tag, push, publish to GitHub
 ```
 
-`GITEA_TOKEN` is a Codeberg access token scoped `write:repository`. The Makefile reads it from `.env`, which is gitignored — do not commit it, and do not put it in `.env.example`. `.env` is the source of truth and overrides any `GITEA_TOKEN` already exported in your shell.
+`GITHUB_TOKEN` is a GitHub personal access token with `contents:write` on `kjrocker/pglantern-cli`. The Makefile reads it from `.env`, which is gitignored — do not commit it, and do not put it in `.env.example`. `.env` is the source of truth and overrides any `GITHUB_TOKEN` already exported in your shell.
 
 `make release` refuses to run on a dirty tree, without a `v`-prefixed `TAG`, or without the token.
 
