@@ -2,13 +2,9 @@ version: 2
 
 project_name: lantern
 
-# Forgejo runners inject a GITHUB_TOKEN alongside our GITEA_TOKEN; force
-# GoReleaser to use the Gitea one instead of erroring on multiple tokens.
-force_token: gitea
-
-gitea_urls:
-  api: https://codeberg.org/api/v1/
-  download: https://codeberg.org
+# Insurance against a stale GITEA_TOKEN in the ambient shell: with two tokens
+# in the environment GoReleaser errors out instead of picking one.
+force_token: github
 
 builds:
   - id: lantern
@@ -40,6 +36,6 @@ release:
   # Overwrite an existing release for the tag instead of failing, so re-runs
   # after a partial/failed release succeed.
   mode: replace
-  gitea:
-    owner: kehvyn
+  github:
+    owner: kjrocker
     name: pglantern-cli
