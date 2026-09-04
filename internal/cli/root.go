@@ -8,7 +8,7 @@ package cli
 import (
 	"errors"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/output"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

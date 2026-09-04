@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/cli"
-	"codeberg.org/kehvyn/pglantern-cli/internal/output"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/cli"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/output"
 )
 
 func main() {

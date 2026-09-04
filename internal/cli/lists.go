@@ -3,8 +3,8 @@ package cli
 import (
 	"os"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/api"
-	"codeberg.org/kehvyn/pglantern-cli/internal/output"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

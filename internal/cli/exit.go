@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
 )
 
 // usageError marks an error as the caller's misuse of the CLI — bad flags,

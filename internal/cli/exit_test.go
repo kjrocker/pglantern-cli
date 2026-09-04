@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"codeberg.org/kehvyn/pglantern-cli/internal/api"
+	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
 )
 
 func TestExitCode(t *testing.T) {
