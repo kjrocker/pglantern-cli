@@ -2,7 +2,7 @@
 
 `gh`-style command-line client for [pgLantern](https://pglantern.com).
 
-A basic passthrough client that exists so that we don't have to `curl` the pgLantern endpoints directly.
+A basic passthrough client that exists so that we don't have to `curl` the pgLantern endpoints directly. Also provides terminal paging for large results.
 
 ## Install
 
@@ -31,10 +31,9 @@ go build -o lantern .
 
 ## Login
 
-No key required. With none configured, the CLI runs on the anonymous per-IP
-tier and every command works out of the box. A key only raises the rate limits
-— mint one in the pgLantern web UI under `/users/api-keys` and `lantern login`
-to save it.
+We don't work with your authentication information, the client simply stores one of your API keys.
+
+If no API key is provided, you'll be on anonymous per-IP limits (which are quite low). If you're self-hosting (or want to run behind a proxy or something), just set `--host`.
 
 ```sh
 lantern login                       # prompts for the key, validates, saves
@@ -87,12 +86,10 @@ lantern messages --limit 3 --json | jq '.data[].subject'
 ```
 
 In a terminal, tables truncate long cells and page through `$LANTERN_PAGER`,
-`$PAGER`, or `less -FRX` (`--no-pager` disables). Piped output is untruncated
-and unpaged.
+`$PAGER`, or `less -FRX` (`--no-pager` disables).
 
-Fetch a known set of records instead of a page with `--id` (repeatable; `-`
-reads newline-delimited ids from stdin), on `messages`, `commits`, and
-`senders`:
+Fetch a known set of records with `--id` (repeatable; `-` reads newline-delimited
+ids from stdin), on `messages`, `commits`, and `senders`:
 
 ```sh
 lantern threads --json | jq -r '.data[].starter.message_id' | lantern messages --id -
@@ -135,7 +132,7 @@ go vet ./...
 
 ## Releasing
 
-Maintainer-facing. Releases are built and published from a local machine — the Go build is `CGO_ENABLED=0`, so the darwin archives cross-compile from Linux.
+Releases are built and published from my laptop — the Go build is `CGO_ENABLED=0`, so the darwin archives cross-compile from Linux.
 
 ```sh
 mise install                  # go + goreleaser
@@ -144,7 +141,7 @@ make release-dry              # build all four archives into dist/, publish noth
 make release TAG=v0.3.0       # test, tag, push, publish to GitHub
 ```
 
-`GITHUB_TOKEN` is a GitHub personal access token with `contents:write` on `kjrocker/pglantern-cli`. The Makefile reads it from `.env`, which is gitignored — do not commit it, and do not put it in `.env.example`. `.env` is the source of truth and overrides any `GITHUB_TOKEN` already exported in your shell.
+`GITHUB_TOKEN` is a GitHub token with `contents:write` on `kjrocker/pglantern-cli`.
 
 `make release` refuses to run on a dirty tree, without a `v`-prefixed `TAG`, or without the token.
 
