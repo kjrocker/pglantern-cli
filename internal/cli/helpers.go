@@ -46,8 +46,9 @@ func resolveKey(cmd *cobra.Command, cfg config.Config) string {
 
 // clientFrom builds the API client from resolved host and key. The key is
 // optional: when none resolves, resolveKey returns "" and the client makes
-// anonymous-tier requests (no Authorization header). A key raises the rate
-// limits and charges usage to the account's shared pool rather than the IP's.
+// anonymous-tier requests (no Authorization header, and a daily per-IP budget).
+// A key raises the rate limits and charges usage to the account's shared annual
+// pool rather than the IP's.
 func clientFrom(cmd *cobra.Command) (*api.Client, error) {
 	cfg, err := config.Load()
 	if err != nil {
