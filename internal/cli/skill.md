@@ -41,8 +41,9 @@ Confirm it's live with `lantern --version`.
 
 A key is optional. The CLI defaults to the hosted archive at
 `https://pglantern.com`, and with no key configured it runs on the anonymous
-per-IP tier — every command works out of the box. A key only raises the rate
-limits. API keys are minted in the pgLantern web UI under `/users/api-keys`;
+per-IP tier — every command works out of the box. A key raises the rate limits
+and moves usage onto your account's shared daily pool, which every key on that
+account spends from. API keys are minted in the pgLantern web UI under `/users/api-keys`;
 `lantern login` prompts for one, validates it against the server, and saves the
 key + host to `~/.config/lantern/config.json` (mode 0600):
 
@@ -374,9 +375,13 @@ it off in a terminal.
   A key is optional (no key runs on the anonymous tier), so if you don't need
   the higher limits, `lantern logout` to drop the bad key; otherwise mint a
   fresh one in the web UI under `/users/api-keys` and `lantern login` again.
-- `daily request quota exceeded` / `burst rate limit exceeded` (429) — the
-  anonymous per-IP tier is capped (per-minute and per-day). Log in with a key to
-  raise the limits.
+- `daily quota exceeded` / `burst rate limit exceeded` (429) — the budget is
+  capped per-minute and per-day. Keyless, that is the anonymous per-IP tier: log
+  in with a key to raise the limits. With a key, the cap is your **account's**,
+  shared across every key you hold, so another machine may have spent it;
+  `/users/api-keys` shows which. The daily budget is in cost units — a search
+  costs 5, a listing 2, a lookup 1 — so a search can be refused while cheaper
+  commands still work.
 - `connection refused` / dial errors — nothing is listening at the host you
   targeted. With no host set the CLI defaults to the hosted archive at
   `https://pglantern.com`; if you're pointing at a self-hosted deployment,
