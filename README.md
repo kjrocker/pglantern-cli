@@ -29,6 +29,16 @@ mise install
 go build -o lantern .
 ```
 
+## Upgrade
+
+```sh
+lantern upgrade               # latest release
+lantern upgrade --check       # report installed vs latest, change nothing
+lantern upgrade --to v0.9.0   # a specific release (downgrades too)
+```
+
+Downloads the release for your platform, verifies it against the release's `checksums.txt`, and replaces the binary in place — wherever it was installed and whatever it's named. If that's a root-owned directory like `/usr/local/bin`, run it with `sudo`. Source builds report version `dev` and refuse unless you pass `--force`.
+
 ## Login
 
 We don't work with your authentication information, the client simply stores one of your API keys.

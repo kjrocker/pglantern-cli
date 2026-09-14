@@ -43,7 +43,7 @@ func NewRootCmd() *cobra.Command {
 			return
 		}
 		switch cmd.Name() {
-		case "login", "logout", "open":
+		case "login", "logout", "open", "upgrade":
 			return
 		case "skill":
 			// The stdout form is pageable like any other render; -o writes a
@@ -74,6 +74,7 @@ func NewRootCmd() *cobra.Command {
 		newAnalyticsCmd(),
 		newAPICmd(),
 		newSkillCmd(),
+		newUpgradeCmd(),
 	)
 
 	wrapArgsErrors(root)
