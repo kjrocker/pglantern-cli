@@ -59,6 +59,7 @@ lantern senders --sort messages --dir desc
 lantern senders get 42
 lantern threads vacuum --from 2024-01-01       # discussion threads, newest activity first
 lantern threads --sort messages --dir desc     # busiest threads first
+lantern threads --list pgsql-hackers           # threads with a message on this list (stats stay whole-thread)
 lantern attachments --sort size         # biggest first; also --sort date
 lantern attachments patch 1234          # parsed patch summary
 lantern commits --q "shared_buffers" --path src/backend/access/ --major 16

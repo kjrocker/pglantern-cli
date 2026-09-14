@@ -127,7 +127,10 @@ messages|first|last` with `--dir asc|desc` (server default `last`/`desc`;
 leave both unset to keep it). `search` adds `--list`, `--sender`,
 `--committed`, `--path`, `--major`, `--sort` (`relevance` default, or
 `sent_at`). `senders` adds `--list` (scopes both the people and their stats to
-that list). `commits` adds `--q` (substring over the commit message),
+that list). `threads` also adds `--list`, but unlike `senders` it doesn't
+scope the stats: a matching thread is shown whole, with its true
+`message_count`/`first`/`last activity` across every list it touched, not just
+the one filtered on. `commits` adds `--q` (substring over the commit message),
 `--path`, `--author`, `--major`, and its own sort pair: `--sort
 committed|authored` with `--dir asc|desc` (server default `committed`/`desc`;
 under `--sort authored` the date column shows the author date instead).
