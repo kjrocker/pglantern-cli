@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -120,6 +123,27 @@ func TestThreadsSortEnum(t *testing.T) {
 	// Valid values parse cleanly.
 	if err := newThreadsCmd().Flags().Parse([]string{"--sort", "messages", "--dir", "desc"}); err != nil {
 		t.Errorf("valid sort flags rejected: %v", err)
+	}
+}
+
+func TestThreadsListFlag(t *testing.T) {
+	// --list must reach the actual /threads request as list=x, not just parse.
+	var gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		fmt.Fprint(w, `{"data":[]}`)
+	}))
+	defer srv.Close()
+
+	captureStdout(t, func() {
+		root := NewRootCmd()
+		root.SetArgs([]string{"threads", "--list", "x", "--host", srv.URL, "--api-key", "k"})
+		if err := root.Execute(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(gotQuery, "list=x") {
+		t.Errorf("query = %q, want list=x", gotQuery)
 	}
 }
 
