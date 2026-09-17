@@ -67,6 +67,7 @@ func NewRootCmd() *cobra.Command {
 		newCommitsCmd(),
 		newSendersCmd(),
 		newThreadsCmd(),
+		newWatchesCmd(),
 		newAttachmentsCmd(),
 		newVersionsCmd(),
 		newActivityCmd(),

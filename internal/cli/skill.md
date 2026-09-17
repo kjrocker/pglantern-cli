@@ -9,22 +9,29 @@ description: >-
   GUCs changed between 16 and 17", "find the patch for Z", "search the archive
   for …", "what's happening in src/backend/…". Reach for this before
   hand-rolling curl against /api/v1 — the CLI already handles auth, Message-Id
-  encoding, and pagination. Also use it when the user names the `lantern` command
-  directly.
+  encoding, and pagination. It also manages pgLantern watches (saved alerts on a
+  thread, sender, path, GUC, or query). Also use it when the user names the
+  `lantern` command directly.
 ---
 
 # Querying pgLantern
 
-`lantern` is a `gh`-style command-line client for the pgLantern mailing-list-archive
-JSON API (`/api/v1`). pgLantern indexes the pgsql mailing lists (pgsql-hackers,
--bugs, -performance) alongside the postgres commit history, and — this is the
-interesting part — **links them**: a commit knows the thread it came from, a
-thread knows the commits that landed from it.
+`lantern` is a `gh`-style command-line client for the pgLantern
+mailing-list-archive JSON API (`/api/v1`). pgLantern indexes the pgsql mailing
+lists (pgsql-hackers, -bugs, -performance) alongside the postgres commit
+history, and — this is the interesting part — **links them**: a commit knows the
+thread it came from, a thread knows the commits that landed from it.
 
-The CLI is deliberately a **dumb, read-only client**. It checks required
-arguments and flag types, passes everything else through verbatim, and prints
-the server's error. Every request is a GET; nothing here can mutate the archive,
-so you can explore freely.
+The CLI is deliberately a **dumb client**. It checks required arguments and flag
+types, passes everything else through verbatim, and prints the server's error.
+Nothing here can mutate the archive: every archive command is a GET and works
+with any key (or none), so you can explore freely.
+
+The one write surface is `lantern watches`, which manages your own saved alerts
+— nothing in the corpus. Its mutations (`create`, `pause`, `resume`, `cadence`,
+`delete`) need an API key minted with **manage** access at `/users/api-keys`; a
+read key can list and `get` watches but gets `403 key_read_only` (exit 3) on a
+mutation, and minting a new key is the only fix. `lantern api` stays GET-only.
 
 ## Setup
 
@@ -44,17 +51,18 @@ A key is optional. The CLI defaults to the hosted archive at
 per-IP tier — every command works out of the box. A key raises the rate limits
 and moves usage onto your account's shared annual pool, which every key on that
 account spends from. That pool runs from your own anniversary (signup date, or
-your subscription's start date once you have one), not the calendar year. API keys are minted in the pgLantern web UI under `/users/api-keys`;
-`lantern login` prompts for one, validates it against the server, and saves the
-key + host to `~/.config/lantern/config.json` (mode 0600):
+your subscription's start date once you have one), not the calendar year. API
+keys are minted in the pgLantern web UI under `/users/api-keys`; `lantern login`
+prompts for one, validates it against the server, and saves the key + host to
+`~/.config/lantern/config.json` (mode 0600):
 
 ```sh
 lantern login                                           # hosted archive
 lantern login --host https://your-self-hosted.example.com   # your own deployment
 ```
 
-For non-interactive use, skip the config file and pass credentials per-invocation
-via environment or flags:
+For non-interactive use, skip the config file and pass credentials
+per-invocation via environment or flags:
 
 ```sh
 export LANTERN_API_KEY=hml_…
@@ -62,18 +70,18 @@ export LANTERN_HOST=https://your-self-hosted.example.com   # omit for pglantern.
 ```
 
 Resolution order for both host and key: `--host`/`--api-key` flags, then
-`$LANTERN_HOST` / `$LANTERN_API_KEY`, then the config file. Host falls back to the
-hosted archive at `https://pglantern.com` if nothing else is set — so against a
-self-hosted deployment you **must** supply the host, or every call targets
-pglantern.com.
+`$LANTERN_HOST` / `$LANTERN_API_KEY`, then the config file. Host falls back to
+the hosted archive at `https://pglantern.com` if nothing else is set — so
+against a self-hosted deployment you **must** supply the host, or every call
+targets pglantern.com.
 
 ## Working as an agent: always use `--json`
 
 Every command renders a human table by default. In a terminal, tables truncate
 long fields (senders at 40 chars, subjects at 64) with an ellipsis and route
 through a pager; piped output is untruncated and unpaged, so table output is
-safe for `awk`/`cut`. Still prefer `--json` — it's the server's raw body,
-shaped for `jq`, with nothing flattened:
+safe for `awk`/`cut`. Still prefer `--json` — it's the server's raw body, shaped
+for `jq`, with nothing flattened:
 
 ```sh
 lantern messages --limit 3 --json | jq -r '.data[].subject'
@@ -87,56 +95,57 @@ commands — `jq '.data.thread_id'`, not `jq '.thread_id'`.
 
 Start from whichever entity the question is about:
 
-| Question | Command |
-|---|---|
-| What lists exist? | `lantern lists` |
-| Recent/filtered messages | `lantern messages --list pgsql-hackers --limit 10` |
-| One message (+ body, attachments) | `lantern messages get '<message-id>'` |
-| Open a message's archive page in a browser | `lantern messages open '<message-id>'` |
-| Many messages with bodies, one request | `lantern messages --full --id -` |
-| The whole thread around it | `lantern messages thread '<message-id>'` |
-| Commits that landed from its thread | `lantern messages commits '<message-id>'` |
-| Refs it cites (shas, paths, CVEs) | `lantern messages refs '<message-id>'` |
-| Full-text search | `lantern search vacuum full --committed --major 17` |
-| Discussion threads, newest activity | `lantern threads vacuum --from 2024-01-01` |
-| Busiest threads first | `lantern threads --sort messages --dir desc` |
-| People who post | `lantern senders --sort messages --dir desc` |
-| Message volume over time | `lantern analytics messages --interval month --from 2024-01-01` |
-| Community growth (new senders) | `lantern analytics senders --cumulative` |
-| Most prolific senders (ranked) | `lantern analytics top-senders -n 10 --from 2025-01-01` |
-| Thread size distribution | `lantern analytics thread-sizes` |
-| One person + recent messages | `lantern senders get 42` |
-| Commits by path/author/major | `lantern commits --path src/backend/access/ --major 16` |
-| One commit (+ files, releases) | `lantern commits get <sha-or-prefix>` |
-| Open a commit's archive page in a browser | `lantern commits open <sha-or-prefix>` |
-| **The discussion behind a commit** | `lantern commits thread <sha>` |
-| Attachments / parsed patch summary | `lantern attachments`, `lantern attachments patch 1234` |
-| Majors and releases | `lantern versions` |
-| GUC catalog / what changed | `lantern versions gucs 17 --changed-since 16` |
-| Docs table of contents | `lantern versions docs 17` |
-| Merged commit+thread timeline for a path | `lantern activity src/backend/access/` |
-| Which mbox files were ingested | `lantern imports --list pgsql-hackers` |
+| Question                                   | Command                                                         |
+| ------------------------------------------ | --------------------------------------------------------------- |
+| What lists exist?                          | `lantern lists`                                                 |
+| Recent/filtered messages                   | `lantern messages --list pgsql-hackers --limit 10`              |
+| One message (+ body, attachments)          | `lantern messages get '<message-id>'`                           |
+| Open a message's archive page in a browser | `lantern messages open '<message-id>'`                          |
+| Many messages with bodies, one request     | `lantern messages --full --id -`                                |
+| The whole thread around it                 | `lantern messages thread '<message-id>'`                        |
+| Commits that landed from its thread        | `lantern messages commits '<message-id>'`                       |
+| Refs it cites (shas, paths, CVEs)          | `lantern messages refs '<message-id>'`                          |
+| Full-text search                           | `lantern search vacuum full --committed --major 17`             |
+| Discussion threads, newest activity        | `lantern threads vacuum --from 2024-01-01`                      |
+| Busiest threads first                      | `lantern threads --sort messages --dir desc`                    |
+| People who post                            | `lantern senders --sort messages --dir desc`                    |
+| Message volume over time                   | `lantern analytics messages --interval month --from 2024-01-01` |
+| Community growth (new senders)             | `lantern analytics senders --cumulative`                        |
+| Most prolific senders (ranked)             | `lantern analytics top-senders -n 10 --from 2025-01-01`         |
+| Thread size distribution                   | `lantern analytics thread-sizes`                                |
+| One person + recent messages               | `lantern senders get 42`                                        |
+| Commits by path/author/major               | `lantern commits --path src/backend/access/ --major 16`         |
+| One commit (+ files, releases)             | `lantern commits get <sha-or-prefix>`                           |
+| Open a commit's archive page in a browser  | `lantern commits open <sha-or-prefix>`                          |
+| **The discussion behind a commit**         | `lantern commits thread <sha>`                                  |
+| Attachments / parsed patch summary         | `lantern attachments`, `lantern attachments patch 1234`         |
+| Majors and releases                        | `lantern versions`                                              |
+| GUC catalog / what changed                 | `lantern versions gucs 17 --changed-since 16`                   |
+| Docs table of contents                     | `lantern versions docs 17`                                      |
+| Merged commit+thread timeline for a path   | `lantern activity src/backend/access/`                          |
+| Which mbox files were ingested             | `lantern imports --list pgsql-hackers`                          |
+| Your saved alerts (the only write surface) | `lantern watches`, `lantern watches create --type query --q …`  |
 
 Common filters on the list commands: `--from` / `--to` (ISO-8601 bounds),
-`--limit`/`-n` (server default 25, **max 100** per page), `--after` /
-`--before` (cursors), and `--all` to follow cursors client-side (see
-Pagination). `threads` and `senders` take an optional positional query like
-`search` (`lantern threads vacuum`, `lantern senders lane`; `--q` still works
-as an alias, but not both at once) and share a sort vocabulary: `--sort
-messages|first|last` with `--dir asc|desc` (server default `last`/`desc`;
-leave both unset to keep it). `search` adds `--list`, `--sender`,
+`--limit`/`-n` (server default 25, **max 100** per page), `--after` / `--before`
+(cursors), and `--all` to follow cursors client-side (see Pagination). `threads`
+and `senders` take an optional positional query like `search`
+(`lantern threads vacuum`, `lantern senders lane`; `--q` still works as an
+alias, but not both at once) and share a sort vocabulary:
+`--sort messages|first|last` with `--dir asc|desc` (server default
+`last`/`desc`; leave both unset to keep it). `search` adds `--list`, `--sender`,
 `--committed`, `--path`, `--major`, `--sort` (`relevance` default, or
 `sent_at`). `senders` adds `--list` (scopes both the people and their stats to
-that list). `threads` also adds `--list`, but unlike `senders` it doesn't
-scope the stats: a matching thread is shown whole, with its true
+that list). `threads` also adds `--list`, but unlike `senders` it doesn't scope
+the stats: a matching thread is shown whole, with its true
 `message_count`/`first`/`last activity` across every list it touched, not just
 the one filtered on. `commits` adds `--q` (substring over the commit message),
-`--path`, `--author`, `--major`, and its own sort pair: `--sort
-committed|authored` with `--dir asc|desc` (server default `committed`/`desc`;
-under `--sort authored` the date column shows the author date instead).
-`commits get` takes a full 40-hex sha **or**
-any unambiguous prefix (≥ 4 hex, git-style); an ambiguous prefix errors and
-asks for more characters.
+`--path`, `--author`, `--major`, and its own sort pair:
+`--sort committed|authored` with `--dir asc|desc` (server default
+`committed`/`desc`; under `--sort authored` the date column shows the author
+date instead). `commits get` takes a full 40-hex sha **or** any unambiguous
+prefix (≥ 4 hex, git-style); an ambiguous prefix errors and asks for more
+characters.
 
 `messages open` / `commits open` launch the entity's **upstream** archive page
 (`postgr.es/m/…`, `postgr.es/c/…`) in the default browser; `--site` opens the
@@ -145,11 +154,11 @@ than opening anything (use it in headless/SSH/CI). A Message-Id and a full
 40-hex sha are turned into a URL locally with no request; only a **short sha
 prefix** calls the API, to resolve it server-side.
 
-The `analytics` subcommands are bounded aggregates — no cursors, no
-pagination flags. The two series (`messages`, `senders`) take `--interval
-year|quarter|month`, `--from`/`--to`, and `--cumulative` (running total);
-`top-senders` takes `--limit`/`-n` and a window; `thread-sizes` takes a window
-over the thread's `started_at`. Series rows are `bucket`, `bucket_start`,
+The `analytics` subcommands are bounded aggregates — no cursors, no pagination
+flags. The two series (`messages`, `senders`) take
+`--interval year|quarter|month`, `--from`/`--to`, and `--cumulative` (running
+total); `top-senders` takes `--limit`/`-n` and a window; `thread-sizes` takes a
+window over the thread's `started_at`. Series rows are `bucket`, `bucket_start`,
 `count` and are dense — empty buckets are present with `count: 0`.
 
 For anything the CLI doesn't wrap, there's a GET escape hatch:
@@ -158,12 +167,54 @@ For anything the CLI doesn't wrap, there's a GET escape hatch:
 lantern api /search --param q=vacuum --param limit=5
 ```
 
+## Watches (the write surface)
+
+A watch is a standing alert on your own account: the server re-evaluates it as
+the archive refreshes and delivers what's new by email or webhook. Nothing about
+the corpus changes — you're editing your own subscriptions.
+
+```sh
+lantern watches                                     # ID TYPE PARAMS DELIVERY CADENCE STATUS
+lantern watches get <id>
+lantern watches create --type thread --message-id '<a1@example.com>'
+lantern watches create --type sender --sender-id 42
+lantern watches create --type path --path src/backend/access/ --major 17
+lantern watches create --type guc --name work_mem
+lantern watches create --type query --q io_uring --list pgsql-hackers --cadence weekly
+lantern watches create --type query --q io_uring --channel webhook --endpoint <uuid>
+lantern watches pause <id>        # stop delivering; `resume` puts it back
+lantern watches cadence <id> weekly
+lantern watches delete <id>       # no confirmation prompt
+lantern watches endpoints         # ID URL STATUS — your webhook targets
+```
+
+`--type` selects both what is watched and which subject flag applies: thread →
+`--message-id`, sender → `--sender-id` (integer), path → `--path` (plus optional
+`--major`), guc → `--name`, query → `--q` (plus optional `--list`, `--sender`).
+A valid `--type` and its subject flag are the only things checked locally (usage
+error, exit 2); everything else — watch limits, webhook entitlement, endpoint
+ownership — is the server's 422/403, printed verbatim.
+
+`--channel` defaults to `email`. Email watches carry a **cadence**: `daily`
+sends one email per archive refresh, `weekly` one email every Monday covering
+everything since the last. Webhook watches have no cadence and need
+`--endpoint <uuid>` from `lantern watches endpoints`.
+
+`delete` prompts for nothing and prints nothing to stdout — the server's 204 is
+the receipt, echoed on stderr as `# deleted <id>`. Every mutation renders the
+watch the server echoed back (or the raw body under `--json`).
+
+All five mutations need a key minted with **manage** access; with a read key
+they fail `403 key_read_only` (exit 3) and the CLI adds
+`hint: mint a manage key at /users/api-keys`. Listing and `get` work with any
+key.
+
 ## Message-Ids
 
-Pass the **raw** Message-Id exactly as a table prints it. A surrounding `<>` from
-a mail header is fine — the CLI strips it and percent-encodes the id into one
-path segment for you. Do not pre-encode it, and quote it: Message-Ids routinely
-contain `+`, `=`, and `$`, which the shell would otherwise mangle.
+Pass the **raw** Message-Id exactly as a table prints it. A surrounding `<>`
+from a mail header is fine — the CLI strips it and percent-encodes the id into
+one path segment for you. Do not pre-encode it, and quote it: Message-Ids
+routinely contain `+`, `=`, and `$`, which the shell would otherwise mangle.
 
 ```sh
 lantern messages get 'CAFiTN-sF_J8NB3xjie7g=2-R5v9aLqEE5jrtF2dMmwPngd9RBg@mail.gmail.com'
@@ -190,9 +241,9 @@ lantern messages --limit 100 --after "$C" --json | jq -r '.data[].subject'
 
 `--all` fetches page after page (sequentially, 100 rows per request unless
 `--limit` says otherwise) until the collection runs out or the `--max` row
-ceiling (default **5000**) is hit. There is no "unlimited" — a bigger dump
-means passing a bigger `--max`. Hitting the ceiling prints a resume note on
-stderr, so a capped run is never silently truncated:
+ceiling (default **5000**) is hit. There is no "unlimited" — a bigger dump means
+passing a bigger `--max`. Hitting the ceiling prints a resume note on stderr, so
+a capped run is never silently truncated:
 
 ```
 # stopped at 5000 rows; resume with --after g3QAAAAC... or raise --max
@@ -206,16 +257,16 @@ lantern messages --all --max 1000 --json | jq -r '.data[].subject'
 lantern messages --all --max 1000 --json | jq -s '[.[].data[]] | length'
 ```
 
-Note `.next_cursor` on each streamed line is the *server's* per-page cursor —
+Note `.next_cursor` on each streamed line is the _server's_ per-page cursor —
 for resuming, trust the stderr note, which fires only when rows were actually
-left behind. `--all` composes with `--after` (start point) and every filter,
-but not with `--before` or `--id` (usage error). For a full-corpus export,
-don't: that's what the pipeline/DB is for.
+left behind. `--all` composes with `--after` (start point) and every filter, but
+not with `--before` or `--id` (usage error). For a full-corpus export, don't:
+that's what the pipeline/DB is for.
 
 ### Exact ids
 
-To fetch a known set of records instead of a page, pass `--id` (repeatable).
-`-` reads newline-delimited ids from stdin, so one call's output feeds the next:
+To fetch a known set of records instead of a page, pass `--id` (repeatable). `-`
+reads newline-delimited ids from stdin, so one call's output feeds the next:
 
 ```sh
 lantern threads --json | jq -r '.data[].starter.message_id' | lantern messages --id -
@@ -248,33 +299,33 @@ have since been fixed — collection rows now carry a hydrated `sender` object a
 `lists` array, `senders get` embeds the same full message shape as `search`, and
 bad values fail loudly (below) instead of silently. What remains:
 
-- **Bad values now fail loudly — but confirm empty *filtered* results.** Enum
+- **Bad values now fail loudly — but confirm empty _filtered_ results.** Enum
   flags the CLI itself checks (`--dir`, `--sort` on `threads` and `senders`)
-  print `must be one of: …` before any request. Server-side, a bad `--limit`
-  (> 100), malformed
-  date (`--from`/`--to`), unknown `search --sort`, or nonexistent `--major` all
-  return a 422 error — no more silent fallback to relevance order or an empty
-  table masquerading as "nothing landed." For `--limit`, dates, and `--major`
-  the message names the param and its rule; for `search --sort` it's a terser
-  `Invalid value for enum` (the offending param rides in `details`). Take major
-  names from `lantern versions` (`16`, `9.6`, `master`). Still: a *filtered* query
-  that returns empty is a real (valid) empty — re-run without the filter to tell
-  a genuine absence from an over-narrow one.
-- **`commits thread` writes its misses to stderr**: `no archived discussion
-  found`, and `# unresolved ref (…)` for Message-Ids a commit trailer cites that
-  aren't in the archive. A commit having no thread is normal and not an error —
-  the exit code stays 0.
+  print `must be one of: …` before any request. Server-side, a bad `--limit` (>
+  100), malformed date (`--from`/`--to`), unknown `search --sort`, or
+  nonexistent `--major` all return a 422 error — no more silent fallback to
+  relevance order or an empty table masquerading as "nothing landed." For
+  `--limit`, dates, and `--major` the message names the param and its rule; for
+  `search --sort` it's a terser `Invalid value for enum` (the offending param
+  rides in `details`). Take major names from `lantern versions` (`16`, `9.6`,
+  `master`). Still: a _filtered_ query that returns empty is a real (valid)
+  empty — re-run without the filter to tell a genuine absence from an
+  over-narrow one.
+- **`commits thread` writes its misses to stderr**:
+  `no archived discussion found`, and `# unresolved ref (…)` for Message-Ids a
+  commit trailer cites that aren't in the archive. A commit having no thread is
+  normal and not an error — the exit code stays 0.
 - **Patch attachments are sparse.** Most attachments aren't patches, so
   `attachments --limit 25` may show none; filter with
   `jq '[.data[]|select(.is_patch)]'` and page if you need one.
 - **`versions` rows are mostly empty for unreleased majors** (no released/EOL
   date, no tag) — that's real data, not a broken query.
-- **The per-major GUC catalog reflects a *late minor* of that major, not its
+- **The per-major GUC catalog reflects a _late minor_ of that major, not its
   `.0` release.** Postgres backpatches some GUCs into minor releases, and those
   show up in the older major's catalog here. `restrict_nonsystem_relation_kind`
-  landed in 17.0 *and* was backpatched to 16.4, so pgLantern lists it under 16 and
-  `gucs 17 --changed-since 16` does **not** call it added. A hand-rolled
-  `REL_16_0` vs `REL_17_0` source diff *does*. Neither is wrong — they answer
+  landed in 17.0 _and_ was backpatched to 16.4, so pgLantern lists it under 16
+  and `gucs 17 --changed-since 16` does **not** call it added. A hand-rolled
+  `REL_16_0` vs `REL_17_0` source diff _does_. Neither is wrong — they answer
   different questions ("new since 16.0" vs "new versus current 16.x"). The
   catalog response reports which minor it was snapshotted from in
   `data.server_version` (e.g. `"17.10 …"`), so cite that when it matters. For an
@@ -355,30 +406,37 @@ lantern threads --sort messages --dir desc --limit 20 --json \
 
 Scriptable, `curl`-style:
 
-| Code | Meaning |
-|---|---|
-| 0 | success (including valid-but-empty results) |
-| 1 | anything else: transport errors, 5xx, 422s the server rejected |
-| 2 | usage: bad/conflicting flags, missing arguments, malformed ids |
-| 3 | auth: 401/403 — no key, or the server rejected it |
-| 4 | not found: 404 — the resource doesn't exist |
+| Code | Meaning                                                        |
+| ---- | -------------------------------------------------------------- |
+| 0    | success (including valid-but-empty results)                    |
+| 1    | anything else: transport errors, 5xx, 422s the server rejected |
+| 2    | usage: bad/conflicting flags, missing arguments, malformed ids |
+| 3    | auth: 401/403 — no key, or the server rejected it              |
+| 4    | not found: 404 — the resource doesn't exist                    |
 
-So `lantern commits get <sha> || ...` can distinguish "no such commit" (4)
-from "bad key" (3) without parsing stderr.
+So `lantern commits get <sha> || ...` can distinguish "no such commit" (4) from
+"bad key" (3) without parsing stderr.
 
 ## Pager
 
 In a terminal, table output pages through `$LANTERN_PAGER`, `$PAGER`, or
 `less -FRX` (which exits immediately if the output fits one screen). Piped
-output never pages, so scripts and agents are unaffected; `--no-pager` forces
-it off in a terminal.
+output never pages, so scripts and agents are unaffected; `--no-pager` forces it
+off in a terminal.
 
 ## Troubleshooting
 
-- `A valid API key is required.` — a key was sent and the **server** rejected it.
-  A key is optional (no key runs on the anonymous tier), so if you don't need
-  the higher limits, `lantern logout` to drop the bad key; otherwise mint a
+- `A valid API key is required.` — a key was sent and the **server** rejected
+  it. A key is optional (no key runs on the anonymous tier), so if you don't
+  need the higher limits, `lantern logout` to drop the bad key; otherwise mint a
   fresh one in the web UI under `/users/api-keys` and `lantern login` again.
+- `key_read_only` (403, exit 3) — the key works, but it was minted read-only and
+  a `watches` mutation needs **manage** access. Nothing about the request is
+  wrong: mint a manage key at `/users/api-keys` and `lantern login` again (or
+  pass it with `--api-key`). Reads keep working on the old key.
+- `watch_limit_reached` (403) — your plan's watch allowance is spent; delete or
+  pause one first. `webhooks_not_available` (403) — webhook delivery isn't on
+  your plan, so create the watch with `--channel email` instead.
 - `annual quota exceeded` / `daily quota exceeded` / `burst rate limit exceeded`
   (429) — the budget is capped per-minute, and then per **year** with a key or
   per **day** without one. Keyless, that is the anonymous per-IP tier: log in

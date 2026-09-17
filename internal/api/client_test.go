@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -159,6 +160,115 @@ func TestClientGetExactIDs(t *testing.T) {
 	}
 	if strings.Join(gotIDs, ",") != "a@host,b@host" {
 		t.Errorf("ids[] = %v, want [a@host b@host]", gotIDs)
+	}
+}
+
+func TestClientPost(t *testing.T) {
+	var gotMethod, gotPath, gotType, gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		gotType = r.Header.Get("Content-Type")
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"data":{"id":"w1"}}`))
+	}))
+	defer srv.Close()
+
+	payload := map[string]any{"type": "query", "params": map[string]any{"q": "io_uring"}}
+	body, err := New(srv.URL, "sekrit").Post("/watches", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != `{"data":{"id":"w1"}}` {
+		t.Errorf("body = %q", body)
+	}
+	if gotMethod != http.MethodPost || gotPath != "/api/v1/watches" {
+		t.Errorf("request = %s %s", gotMethod, gotPath)
+	}
+	if gotType != "application/json" {
+		t.Errorf("content-type = %q", gotType)
+	}
+	if gotBody != `{"params":{"q":"io_uring"},"type":"query"}` {
+		t.Errorf("request body = %q", gotBody)
+	}
+}
+
+func TestClientPatch(t *testing.T) {
+	var gotMethod, gotPath, gotType, gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		gotType = r.Header.Get("Content-Type")
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
+		w.Write([]byte(`{"data":{"id":"w1","active":false}}`))
+	}))
+	defer srv.Close()
+
+	body, err := New(srv.URL, "sekrit").Patch("/watches/w1", map[string]any{"active": false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != `{"data":{"id":"w1","active":false}}` {
+		t.Errorf("body = %q", body)
+	}
+	if gotMethod != http.MethodPatch || gotPath != "/api/v1/watches/w1" {
+		t.Errorf("request = %s %s", gotMethod, gotPath)
+	}
+	if gotType != "application/json" {
+		t.Errorf("content-type = %q", gotType)
+	}
+	if gotBody != `{"active":false}` {
+		t.Errorf("request body = %q", gotBody)
+	}
+}
+
+// A delete answers 204 with no body — the client must report that as
+// (nil, nil), not an empty body a caller would try to decode.
+func TestClientDeleteNoContent(t *testing.T) {
+	var gotMethod, gotPath, gotType string
+	var hadBody bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		gotType = r.Header.Get("Content-Type")
+		b, _ := io.ReadAll(r.Body)
+		hadBody = len(b) > 0
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	body, err := New(srv.URL, "sekrit").Delete("/watches/w1")
+	if err != nil {
+		t.Fatalf("delete errored: %v", err)
+	}
+	if body != nil {
+		t.Errorf("body = %q, want nil on 204", body)
+	}
+	if gotMethod != http.MethodDelete || gotPath != "/api/v1/watches/w1" {
+		t.Errorf("request = %s %s", gotMethod, gotPath)
+	}
+	if hadBody {
+		t.Error("delete sent a request body")
+	}
+	if gotType != "" {
+		t.Errorf("content-type = %q, want none for a bodiless request", gotType)
+	}
+}
+
+func TestClientWriteErrorEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"error":{"code":"key_read_only","message":"This API key is read-only."}}`))
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "ro").Post("/watches", map[string]any{"type": "query"})
+	var apiErr *Error
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("want *Error, got %T: %v", err, err)
+	}
+	if apiErr.Status != 403 || apiErr.Code != "key_read_only" {
+		t.Errorf("got %+v", apiErr)
 	}
 }
 

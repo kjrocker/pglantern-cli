@@ -267,6 +267,30 @@ type SizeBucket struct {
 	Count  int    `json:"count"`
 }
 
+// Watch is a saved alert. Params is left untyped because its keys vary by
+// Type (thread → message_id, sender → sender_id, path → path, guc → name,
+// query → q); the CLI renders them generically rather than modelling five
+// shapes. Cadence is null on webhook watches, EndpointID null on email ones.
+type Watch struct {
+	ID         string         `json:"id"`
+	Type       string         `json:"type"`
+	Params     map[string]any `json:"params"`
+	Channel    string         `json:"channel"`
+	EndpointID *string        `json:"endpoint_id"`
+	Cadence    *string        `json:"cadence"`
+	Active     bool           `json:"active"`
+	InsertedAt string         `json:"inserted_at"`
+	UpdatedAt  string         `json:"updated_at"`
+}
+
+// WebhookEndpoint is a delivery target a webhook watch can point at.
+type WebhookEndpoint struct {
+	ID         string  `json:"id"`
+	URL        string  `json:"url"`
+	Active     bool    `json:"active"`
+	DisabledAt *string `json:"disabled_at"`
+}
+
 type ImportFile struct {
 	Basename   string `json:"basename"`
 	Path       string `json:"path"`

@@ -1,10 +1,15 @@
 // Package api is a thin HTTP client for the pgLantern JSON API under /api/v1.
-// It sets the auth header, issues GETs, and decodes the server's error
+// It sets the auth header, issues the request, and decodes the server's error
 // envelope; response bodies are returned as raw bytes so --json output is
 // exactly what the server sent.
+//
+// Reads (GET) are the bulk of the surface; the watch endpoints add writes
+// (POST/PATCH/DELETE), which the server only accepts from a key minted with
+// manage access — a read-only key gets a 403 `key_read_only`.
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -111,11 +116,43 @@ func New(baseURL, key string) *Client {
 // anonymous per-IP tier — sending an empty `Bearer ` token would instead be
 // rejected as an invalid key.
 func (c *Client) Get(path string, query url.Values) ([]byte, error) {
+	return c.do(http.MethodGet, path, query, nil)
+}
+
+// Post sends body as JSON to /api/v1/<path> and returns the raw response body
+// (201 {"data":…} on the watch endpoints).
+func (c *Client) Post(path string, body any) ([]byte, error) {
+	return c.do(http.MethodPost, path, nil, body)
+}
+
+// Patch sends a partial update as JSON and returns the raw response body.
+func (c *Client) Patch(path string, body any) ([]byte, error) {
+	return c.do(http.MethodPatch, path, nil, body)
+}
+
+// Delete removes the resource at path. The server answers 204 with no body, so
+// a successful delete returns (nil, nil).
+func (c *Client) Delete(path string) ([]byte, error) {
+	return c.do(http.MethodDelete, path, nil, nil)
+}
+
+// do is the one round-trip every verb goes through: build the URL, attach the
+// key, JSON-encode a non-nil body, and split 2xx bodies from the error
+// envelope. A 204 has no body to return, so it comes back as (nil, nil).
+func (c *Client) do(method, path string, query url.Values, body any) ([]byte, error) {
 	u := c.BaseURL + apiPrefix + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
 	}
-	req, err := http.NewRequest(http.MethodGet, u, nil)
+	var payload io.Reader
+	if body != nil {
+		encoded, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("encoding request body: %w", err)
+		}
+		payload = bytes.NewReader(encoded)
+	}
+	req, err := http.NewRequest(method, u, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +160,9 @@ func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 		req.Header.Set("Authorization", "Bearer "+c.Key)
 	}
 	req.Header.Set("Accept", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
@@ -130,12 +170,15 @@ func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return body, nil
+		if resp.StatusCode == http.StatusNoContent {
+			return nil, nil
+		}
+		return respBody, nil
 	}
-	return nil, DecodeError(resp.StatusCode, body)
+	return nil, DecodeError(resp.StatusCode, respBody)
 }
