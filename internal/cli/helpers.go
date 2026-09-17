@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -289,6 +290,46 @@ func getRender[T any](cmd *cobra.Command, path string, q url.Values, render func
 	}
 	var v T
 	if err := json.Unmarshal(body, &v); err != nil {
+		return fmt.Errorf("decoding response: %w", err)
+	}
+	render(v)
+	return nil
+}
+
+// mutateRender is getRender's write-side twin: it POSTs/PATCHes/DELETEs path
+// and renders the resource the server echoes back. method is one of
+// http.MethodPost, http.MethodPatch, http.MethodDelete.
+//
+// A 204 (delete) carries no body: nothing is printed here, and the calling
+// command notes what it removed on stderr, keeping stdout empty so a delete in
+// a pipeline contributes nothing.
+func mutateRender[T any](cmd *cobra.Command, method string, path string, body any, render func(T)) error {
+	client, err := clientFrom(cmd)
+	if err != nil {
+		return err
+	}
+	var resp []byte
+	switch method {
+	case http.MethodPost:
+		resp, err = client.Post(path, body)
+	case http.MethodPatch:
+		resp, err = client.Patch(path, body)
+	case http.MethodDelete:
+		resp, err = client.Delete(path)
+	default:
+		return fmt.Errorf("unsupported method %s", method)
+	}
+	if err != nil {
+		return err
+	}
+	if len(resp) == 0 {
+		return nil
+	}
+	if raw, _ := cmd.Flags().GetBool("json"); raw {
+		return output.JSON(os.Stdout, resp)
+	}
+	var v T
+	if err := json.Unmarshal(resp, &v); err != nil {
 		return fmt.Errorf("decoding response: %w", err)
 	}
 	render(v)
