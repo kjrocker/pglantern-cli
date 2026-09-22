@@ -170,7 +170,7 @@ lantern watches endpoints             # ID URL STATUS
 `--list`, `--sender`). Those two checks — a valid `--type` and its subject flag
 — are all the CLI validates; everything else is the server's 422.
 
-Email watches carry a cadence: `daily` sends one email per archive refresh,
+Email watches carry a cadence: `daily` sends one email a day,
 `weekly` one email every Monday covering everything since the last. Webhook
 watches have no cadence and post to a `--endpoint` from
 `lantern watches endpoints`.
