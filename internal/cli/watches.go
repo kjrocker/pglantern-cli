@@ -293,7 +293,7 @@ func newWatchesCadenceCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "cadence <id> <daily|weekly>",
 		Short: "Change an email watch's cadence (needs a manage key)",
-		Long: "Retime an email watch. daily sends one email per archive refresh;\n" +
+		Long: "Retime an email watch. daily sends one email a day;\n" +
 			"weekly sends one email every Monday covering everything since the last.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {

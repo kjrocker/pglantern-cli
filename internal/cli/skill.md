@@ -196,7 +196,7 @@ error, exit 2); everything else — watch limits, webhook entitlement, endpoint
 ownership — is the server's 422/403, printed verbatim.
 
 `--channel` defaults to `email`. Email watches carry a **cadence**: `daily`
-sends one email per archive refresh, `weekly` one email every Monday covering
+sends one email a day, `weekly` one email every Monday covering
 everything since the last. Webhook watches have no cadence and need
 `--endpoint <uuid>` from `lantern watches endpoints`.
 
