@@ -25,10 +25,19 @@ func newListsCmd() *cobra.Command {
 					if !l.Active {
 						active = "no"
 					}
-					rows = append(rows, []string{l.Name, active, l.ShortDesc})
+					rows = append(rows, []string{l.Name, active, lastActivity(l.Stats), l.ShortDesc})
 				}
-				output.Table(os.Stdout, []string{"NAME", "ACTIVE", "DESCRIPTION"}, rows)
+				output.Table(os.Stdout, []string{"NAME", "ACTIVE", "LAST ACTIVITY", "DESCRIPTION"}, rows)
 			})
 		},
 	}
+}
+
+// lastActivity renders a list's latest post as a date, or "-" when the list has
+// no messages or its stats haven't been computed yet.
+func lastActivity(s *api.ListStats) string {
+	if s == nil || s.LastMessageAt == nil || len(*s.LastMessageAt) < 10 {
+		return output.OrDash(nil)
+	}
+	return (*s.LastMessageAt)[:10]
 }
