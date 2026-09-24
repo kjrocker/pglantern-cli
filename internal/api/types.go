@@ -17,9 +17,15 @@ type Item[T any] struct {
 }
 
 type List struct {
-	Name      string `json:"name"`
-	ShortDesc string `json:"short_desc"`
-	Active    bool   `json:"active"`
+	Name      string     `json:"name"`
+	ShortDesc string     `json:"short_desc"`
+	Active    bool       `json:"active"`
+	Stats     *ListStats `json:"stats"`
+}
+
+type ListStats struct {
+	MessageCount  int     `json:"message_count"`
+	LastMessageAt *string `json:"last_message_at"`
 }
 
 type Sender struct {
