@@ -78,6 +78,7 @@ lantern messages thread '<message-id>'
 lantern search vacuum full --committed --major 17
 lantern search vacuum --sort sent_at --dir asc  # oldest matching first
 lantern senders --sort messages --dir desc
+lantern senders --sort first --first-from 2015-01-01 --first-to 2015-12-31
 lantern senders get 42
 lantern threads vacuum --from 2024-01-01       # discussion threads, newest activity first
 lantern threads --sort messages --dir desc     # busiest threads first

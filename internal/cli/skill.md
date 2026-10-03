@@ -109,6 +109,7 @@ Start from whichever entity the question is about:
 | Discussion threads, newest activity        | `lantern threads vacuum --from 2024-01-01`                      |
 | Busiest threads first                      | `lantern threads --sort messages --dir desc`                    |
 | People who post                            | `lantern senders --sort messages --dir desc`                    |
+| Senders who started posting in 2015        | `lantern senders --first-from 2015-01-01 --first-to 2015-12-31` |
 | Message volume over time                   | `lantern analytics messages --interval month --from 2024-01-01` |
 | Community growth (new senders)             | `lantern analytics senders --cumulative`                        |
 | Most prolific senders (ranked)             | `lantern analytics top-senders -n 10 --from 2025-01-01`         |
@@ -136,7 +137,8 @@ alias, but not both at once) and share a sort vocabulary:
 `last`/`desc`; leave both unset to keep it). `search` adds `--list`, `--sender`,
 `--committed`, `--path`, `--major`, `--sort` (`relevance` default, or
 `sent_at`). `senders` adds `--list` (scopes both the people and their stats to
-that list). `threads` also adds `--list`, but unlike `senders` it doesn't scope
+that list) and `--first-from`/`--first-to`/`--last-from`/`--last-to`
+(inclusive ISO-8601 bounds on first/last post date, per-list with `--list`). `threads` also adds `--list`, but unlike `senders` it doesn't scope
 the stats: a matching thread is shown whole, with its true
 `message_count`/`first`/`last activity` across every list it touched, not just
 the one filtered on. `commits` adds `--q` (substring over the commit message),
