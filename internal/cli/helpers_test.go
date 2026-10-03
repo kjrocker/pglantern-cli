@@ -147,6 +147,30 @@ func TestThreadsListFlag(t *testing.T) {
 	}
 }
 
+func TestSendersDateFlags(t *testing.T) {
+	// The date-bound flags must reach /senders with underscored param names.
+	var gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		fmt.Fprint(w, `{"data":[]}`)
+	}))
+	defer srv.Close()
+
+	captureStdout(t, func() {
+		root := NewRootCmd()
+		root.SetArgs([]string{"senders", "--first-from", "2015-01-01", "--last-to", "2024-12-31",
+			"--host", srv.URL, "--api-key", "k"})
+		if err := root.Execute(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	for _, want := range []string{"first_from=2015-01-01", "last_to=2024-12-31"} {
+		if !strings.Contains(gotQuery, want) {
+			t.Errorf("query = %q, want %s", gotQuery, want)
+		}
+	}
+}
+
 func TestCommitsSortEnum(t *testing.T) {
 	// A known-bad --sort fails at parse time, before any HTTP call.
 	if err := newCommitsCmd().Flags().Parse([]string{"--sort", "banana"}); err == nil {

@@ -34,7 +34,8 @@ func newSendersCmd() *cobra.Command {
 			if err := rejectPaginationWithIDs(cmd); err != nil {
 				return err
 			}
-			q := collectQuery(cmd, "q", "list", "sort", "dir", "limit", "after", "before")
+			q := collectQuery(cmd, "q", "list", "first-from", "first-to", "last-from", "last-to",
+				"sort", "dir", "limit", "after", "before")
 			if err := positionalQuery(cmd, args, q); err != nil {
 				return err
 			}
@@ -68,6 +69,10 @@ func newSendersCmd() *cobra.Command {
 	}
 	cmd.Flags().String("q", "", "substring match on email or display name")
 	cmd.Flags().String("list", "", "restrict to senders who posted to this mailing list (stats scope to it too)")
+	cmd.Flags().String("first-from", "", "only senders whose first post is on/after this date (ISO-8601; per-list with --list)")
+	cmd.Flags().String("first-to", "", "only senders whose first post is on/before this date (ISO-8601; per-list with --list)")
+	cmd.Flags().String("last-from", "", "only senders whose last post is on/after this date (ISO-8601; per-list with --list)")
+	cmd.Flags().String("last-to", "", "only senders whose last post is on/before this date (ISO-8601; per-list with --list)")
 	addEnumFlag(cmd, "sort", "sort key", "messages", "first", "last")
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	addPaginationFlags(cmd)
