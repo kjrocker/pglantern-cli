@@ -104,10 +104,15 @@ Start from whichever entity the question is about:
 | Many messages with bodies, one request     | `lantern messages --full --id -`                                |
 | The whole thread around it                 | `lantern messages thread '<message-id>'`                        |
 | Commits that landed from its thread        | `lantern messages commits '<message-id>'`                       |
+| Commitfest patches on its thread           | `lantern messages commitfest '<message-id>'`                    |
 | Refs it cites (shas, paths, CVEs)          | `lantern messages refs '<message-id>'`                          |
 | Full-text search                           | `lantern search vacuum full --committed --major 17`             |
 | Discussion threads, newest activity        | `lantern threads vacuum --from 2024-01-01`                      |
 | Busiest threads first                      | `lantern threads --sort messages --dir desc`                    |
+| Threads whose patch awaits review          | `lantern search vacuum --cf-status needs_review`                |
+| Commitfests, newest first                  | `lantern commitfests`                                           |
+| One commitfest's patches                   | `lantern commitfests patches 52 --status ready_for_committer`   |
+| One patch: history, threads, commits       | `lantern commitfests patch 4242`                                |
 | People who post                            | `lantern senders --sort messages --dir desc`                    |
 | Senders who started posting in 2015        | `lantern senders --first-from 2015-01-01 --first-to 2015-12-31` |
 | Message volume over time                   | `lantern analytics messages --interval month --from 2024-01-01` |
@@ -350,6 +355,17 @@ then walk to the commits:
 lantern search 'conflict log history' --committed --json | jq -r '.data[0].message_id'
 lantern messages commits '<that-message-id>'
 ```
+
+**"Is this thread's patch waiting on review?"** — map the thread to its
+commitfest patches, then read the patch's status and history:
+
+```sh
+lantern messages commitfest '<message-id>'   # PATCH, STATUS, CF, NAME
+lantern commitfests patch <patch-id>         # history, cited threads, commits
+```
+
+`committed` is the commitfest app's claim; the git commits are authoritative, so
+confirm with `lantern messages commits '<message-id>'`.
 
 **"Who are the most prolific hackers?"** — the senders index carries stats
 (`message_count`, `first_message_at`, `last_message_at`), unlike messages:

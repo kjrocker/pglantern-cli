@@ -304,3 +304,58 @@ type ImportFile struct {
 	SHA256     string `json:"sha256"`
 	InsertedAt string `json:"inserted_at"`
 }
+
+// Commitfest is one row of /commitfests. EntryCounts maps status slug to the
+// number of entries (statuses with none are absent; `moved` is included).
+type Commitfest struct {
+	ID          int            `json:"id"`
+	Name        string         `json:"name"`
+	Status      string         `json:"status"`
+	StatusLabel string         `json:"status_label"`
+	Draft       bool           `json:"draft"`
+	StartDate   string         `json:"start_date"`
+	EndDate     string         `json:"end_date"`
+	EntryCounts map[string]int `json:"entry_counts"`
+	SourceURL   string         `json:"source_url"`
+}
+
+// CfEntry is one patch's stay in one commitfest.
+type CfEntry struct {
+	CfID        int     `json:"cf_id"`
+	CfName      string  `json:"cf_name"`
+	Status      string  `json:"status"`
+	StatusLabel string  `json:"status_label"`
+	EnteredAt   string  `json:"entered_at"`
+	LeftAt      *string `json:"left_at"`
+}
+
+// CfPatchSummary is a commitfest patch with its current entry (nil if none).
+// Entry is only set on /commitfests/:id/patches rows: the entry in that cf.
+type CfPatchSummary struct {
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	Authors     []string `json:"authors"`
+	LastEmailAt *string  `json:"last_email_at"`
+	Current     *CfEntry `json:"current"`
+	Entry       *CfEntry `json:"entry,omitempty"`
+	SourceURL   string   `json:"source_url"`
+}
+
+// CfPatchThread is a thread a patch cites; ThreadID is nil when the cited
+// message isn't in the archive.
+type CfPatchThread struct {
+	MessageID       string  `json:"message_id"`
+	ThreadID        *string `json:"thread_id"`
+	Subject         *string `json:"subject"`
+	LatestMessageID *string `json:"latest_message_id"`
+	LatestMessageAt *string `json:"latest_message_at"`
+	HasAttachment   bool    `json:"has_attachment"`
+}
+
+// CfPatch is /cf-patches/:id: the summary plus history, threads and commits.
+type CfPatch struct {
+	CfPatchSummary
+	History []CfEntry       `json:"history"`
+	Threads []CfPatchThread `json:"threads"`
+	Commits []CommitSummary `json:"commits"`
+}

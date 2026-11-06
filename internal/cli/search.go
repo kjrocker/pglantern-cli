@@ -13,7 +13,7 @@ func newSearchCmd() *cobra.Command {
 		Args:  requireArgs("a search query"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd,
-				"list", "sort", "dir", "sender", "committed", "path", "major",
+				"list", "sort", "dir", "sender", "committed", "path", "major", "cf-status",
 				"from", "to", "limit", "after", "before")
 			q.Set("q", strings.Join(args, " "))
 			return renderMessagePage(cmd, "/search", q, true)
@@ -26,6 +26,7 @@ func newSearchCmd() *cobra.Command {
 	cmd.Flags().Bool("committed", false, "only threads with a landed commit")
 	cmd.Flags().String("path", "", "threads whose landed commit or patch touches this path prefix")
 	cmd.Flags().String("major", "", "threads that landed a commit first shipped in this major (16, 9.6, master)")
+	addEnumFlag(cmd, "cf-status", "threads with a commitfest patch in this status", cfSearchStatuses...)
 	cmd.Flags().String("from", "", "ISO-8601 lower bound on sent_at")
 	cmd.Flags().String("to", "", "ISO-8601 upper bound on sent_at")
 	addPaginationFlags(cmd)

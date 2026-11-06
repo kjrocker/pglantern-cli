@@ -83,6 +83,11 @@ lantern senders get 42
 lantern threads vacuum --from 2024-01-01       # discussion threads, newest activity first
 lantern threads --sort messages --dir desc     # busiest threads first
 lantern threads --list pgsql-hackers           # threads with a message on this list (stats stay whole-thread)
+lantern messages commitfest '<message-id>'     # commitfest patches attached to its thread
+lantern search vacuum --cf-status needs_review # threads whose patch is in that commitfest status
+lantern commitfests                     # commitfests, newest first
+lantern commitfests patches 52 --status ready_for_committer
+lantern commitfests patch 4242          # history, cited threads, landed commits
 lantern attachments --sort size         # biggest first; also --sort date
 lantern attachments patch 1234          # parsed patch summary
 lantern commits --q "shared_buffers" --path src/backend/access/ --major 16
