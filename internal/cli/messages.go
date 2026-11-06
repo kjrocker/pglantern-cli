@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
@@ -207,6 +208,7 @@ func newMessagesCmd() *cobra.Command {
 		newMessagesOpenCmd(),
 		newMessagesThreadCmd(),
 		newMessagesCommitsCmd(),
+		newMessagesCommitfestCmd(),
 		newMessagesRefsCmd(),
 	)
 	return cmd
@@ -297,6 +299,31 @@ func newMessagesRefsCmd() *cobra.Command {
 					rows = append(rows, []string{r.RefType, r.Value, output.OrDash(r.ResolvedSHA)})
 				}
 				output.Table(os.Stdout, []string{"TYPE", "VALUE", "RESOLVED SHA"}, rows)
+			})
+		},
+	}
+}
+
+func newMessagesCommitfestCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "commitfest <message-id>",
+		Short: "Show the commitfest patches attached to a message's thread",
+		Args:  requireArg("a message id"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := messagePath(args[0], "/commitfest")
+			return getRender(cmd, path, nil, func(page api.Page[api.CfPatchSummary]) {
+				if len(page.Data) == 0 {
+					output.EmptyNote("this thread never entered a commitfest")
+					return
+				}
+				rows := make([][]string, 0, len(page.Data))
+				for _, p := range page.Data {
+					rows = append(rows, []string{
+						strconv.Itoa(p.ID), cfEntryStatus(p.Current), cfEntryName(p.Current),
+						output.Truncate(p.Name, 64),
+					})
+				}
+				output.Table(os.Stdout, []string{"PATCH", "STATUS", "CF", "NAME"}, rows)
 			})
 		},
 	}

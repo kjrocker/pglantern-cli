@@ -35,7 +35,7 @@ func newThreadsCmd() *cobra.Command {
 		Short: "Browse discussion threads across the lists",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := collectQuery(cmd, "q", "list", "sort", "dir", "from", "to", "limit", "after", "before")
+			q := collectQuery(cmd, "q", "list", "sort", "dir", "cf-status", "from", "to", "limit", "after", "before")
 			if err := positionalQuery(cmd, args, q); err != nil {
 				return err
 			}
@@ -65,6 +65,7 @@ func newThreadsCmd() *cobra.Command {
 	cmd.Flags().String("list", "", "restrict to threads with a message on this list (stats stay whole-thread)")
 	addEnumFlag(cmd, "sort", "sort key", "messages", "first", "last")
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
+	addEnumFlag(cmd, "cf-status", "threads with a commitfest patch in this status", cfSearchStatuses...)
 	cmd.Flags().String("from", "", "only threads active on/after this date (ISO-8601)")
 	cmd.Flags().String("to", "", "only threads active on/before this date (ISO-8601)")
 	addPaginationFlags(cmd)
