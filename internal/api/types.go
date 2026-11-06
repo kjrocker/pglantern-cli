@@ -46,10 +46,11 @@ type MessageSummary struct {
 }
 
 type AttachmentRef struct {
-	ID          int    `json:"id"`
-	Filename    string `json:"filename"`
-	ContentType string `json:"content_type"`
-	IsPatch     bool   `json:"is_patch"`
+	ID          int          `json:"id"`
+	Filename    string       `json:"filename"`
+	ContentType string       `json:"content_type"`
+	IsPatch     bool         `json:"is_patch"`
+	Patch       *PatchSeries `json:"patch"` // nil unless IsPatch
 }
 
 type MessageFull struct {
@@ -182,12 +183,18 @@ type PatchFile struct {
 	Deletions int    `json:"deletions"`
 }
 
+// PatchSeries is a patch's format and series position: the inline `patch`
+// object on a full message's attachments, and the head of /attachments/{id}/patch.
+type PatchSeries struct {
+	Format        string `json:"format"`
+	SeriesVersion *int   `json:"series_version"`
+	SeriesSeq     *int   `json:"series_seq"`
+	Subject       string `json:"subject"`
+}
+
 type Patch struct {
-	Format        string      `json:"format"`
-	SeriesVersion *int        `json:"series_version"`
-	SeriesSeq     *int        `json:"series_seq"`
-	Subject       string      `json:"subject"`
-	Files         []PatchFile `json:"files"`
+	PatchSeries
+	Files []PatchFile `json:"files"`
 }
 
 type ActivityRow struct {

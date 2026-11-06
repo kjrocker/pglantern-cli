@@ -161,3 +161,27 @@ func TestMessagePath(t *testing.T) {
 		})
 	}
 }
+
+func TestAttachmentPatchCell(t *testing.T) {
+	v, seq := 3, 2
+	tests := []struct {
+		name string
+		att  api.AttachmentRef
+		want string
+	}{
+		{"not a patch", api.AttachmentRef{}, "-"},
+		{"versioned series part", api.AttachmentRef{IsPatch: true,
+			Patch: &api.PatchSeries{SeriesVersion: &v, SeriesSeq: &seq}}, "v3 patch 2"},
+		{"version without a sequence", api.AttachmentRef{IsPatch: true,
+			Patch: &api.PatchSeries{SeriesVersion: &v}}, "v3"},
+		{"untagged patch", api.AttachmentRef{IsPatch: true, Patch: &api.PatchSeries{}}, "yes"},
+		{"older server without the patch object", api.AttachmentRef{IsPatch: true}, "yes"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := attachmentPatchCell(tt.att); got != tt.want {
+				t.Errorf("attachmentPatchCell() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

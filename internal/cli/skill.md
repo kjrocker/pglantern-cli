@@ -326,6 +326,10 @@ bad values fail loudly (below) instead of silently. What remains:
 - **Patch attachments are sparse.** Most attachments aren't patches, so
   `attachments --limit 25` may show none; filter with
   `jq '[.data[]|select(.is_patch)]'` and page if you need one.
+- **A thread's patch series is one call:** `messages thread <id> --full --json`
+  gives every attachment with `.patch.series_version`/`.patch.series_seq`
+  (`patch` is null for non-diffs) — no `attachments patch` per part needed to
+  group versions.
 - **`attachments raw` serves patches only** and writes the bytes verbatim (no
   charset conversion, gzip already inflated) — a non-patch id is not-found.
   Diff it against `git show <sha>` to see what a committer changed on the way
