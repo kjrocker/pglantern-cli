@@ -125,6 +125,7 @@ Start from whichever entity the question is about:
 | Open a commit's archive page in a browser  | `lantern commits open <sha-or-prefix>`                          |
 | **The discussion behind a commit**         | `lantern commits thread <sha>`                                  |
 | Attachments / parsed patch summary         | `lantern attachments`, `lantern attachments patch 1234`         |
+| A patch's text, as posted                  | `lantern attachments raw 1234 > v7-0001.patch`                  |
 | Majors and releases                        | `lantern versions`                                              |
 | GUC catalog / what changed                 | `lantern versions gucs 17 --changed-since 16`                   |
 | Docs table of contents                     | `lantern versions docs 17`                                      |
@@ -325,6 +326,10 @@ bad values fail loudly (below) instead of silently. What remains:
 - **Patch attachments are sparse.** Most attachments aren't patches, so
   `attachments --limit 25` may show none; filter with
   `jq '[.data[]|select(.is_patch)]'` and page if you need one.
+- **`attachments raw` serves patches only** and writes the bytes verbatim (no
+  charset conversion, gzip already inflated) — a non-patch id is not-found.
+  Diff it against `git show <sha>` to see what a committer changed on the way
+  in.
 - **`versions` rows are mostly empty for unreleased majors** (no released/EOL
   date, no tag) — that's real data, not a broken query.
 - **The per-major GUC catalog reflects a _late minor_ of that major, not its

@@ -296,6 +296,22 @@ func getRender[T any](cmd *cobra.Command, path string, q url.Values, render func
 	return nil
 }
 
+// getRaw fetches a non-JSON endpoint and copies the body to stdout byte for
+// byte — no decoding, no trailing newline added — so it pipes cleanly into
+// diff/patch/git apply. --json has no meaning for these and is ignored.
+func getRaw(cmd *cobra.Command, path string, q url.Values) error {
+	client, err := clientFrom(cmd)
+	if err != nil {
+		return err
+	}
+	body, err := client.GetText(path, q)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(body)
+	return err
+}
+
 // mutateRender is getRender's write-side twin: it POSTs/PATCHes/DELETEs path
 // and renders the resource the server echoes back. method is one of
 // http.MethodPost, http.MethodPatch, http.MethodDelete.

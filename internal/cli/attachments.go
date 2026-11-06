@@ -40,7 +40,7 @@ func newAttachmentsCmd() *cobra.Command {
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	addPaginationFlags(cmd)
 
-	cmd.AddCommand(newAttachmentsGetCmd(), newAttachmentsPatchCmd())
+	cmd.AddCommand(newAttachmentsGetCmd(), newAttachmentsPatchCmd(), newAttachmentsRawCmd())
 	return cmd
 }
 
@@ -116,6 +116,26 @@ func newAttachmentsPatchCmd() *cobra.Command {
 						output.Table(os.Stdout, []string{"PATH", "ADD", "DEL"}, rows)
 					}
 				})
+		},
+	}
+}
+
+func newAttachmentsRawCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "raw <id>",
+		Short: "Print a patch attachment's text, as posted",
+		Long: "Print a patch attachment's text exactly as posted (gzipped parts arrive\n" +
+			"decompressed), for piping into diff, interdiff or git apply. Only patch\n" +
+			"attachments are served; any other attachment is a not-found error.\n\n" +
+			"  lantern attachments raw 1234 > v7-0001.patch\n" +
+			"  interdiff <(lantern attachments raw 1234) <(git show <sha>)",
+		Args: requireArg("an attachment id"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := attachmentID(args[0])
+			if err != nil {
+				return err
+			}
+			return getRaw(cmd, fmt.Sprintf("/attachments/%d/raw", id), nil)
 		},
 	}
 }

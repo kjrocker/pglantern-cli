@@ -90,6 +90,7 @@ lantern commitfests patches 52 --status ready_for_committer
 lantern commitfests patch 4242          # history, cited threads, landed commits
 lantern attachments --sort size         # biggest first; also --sort date
 lantern attachments patch 1234          # parsed patch summary
+lantern attachments raw 1234 > a.patch  # the patch text itself (patches only)
 lantern commits --q "shared_buffers" --path src/backend/access/ --major 16
 lantern commits --sort authored --dir asc      # oldest author date first
 lantern commits get <sha>               # full 40-hex sha
