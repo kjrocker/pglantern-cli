@@ -92,17 +92,10 @@ func newAttachmentsPatchCmd() *cobra.Command {
 			return getRender(cmd, fmt.Sprintf("/attachments/%d/patch", id), nil,
 				func(item api.Item[api.Patch]) {
 					p := item.Data
-					version := "-"
-					if p.SeriesVersion != nil {
-						version = fmt.Sprintf("v%d", *p.SeriesVersion)
-						if p.SeriesSeq != nil {
-							version = fmt.Sprintf("%s patch %d", version, *p.SeriesSeq)
-						}
-					}
 					output.Detail(os.Stdout, [][2]string{
 						{"Attachment", strconv.Itoa(id)},
 						{"Format", p.Format},
-						{"Series", version},
+						{"Series", seriesLabel(p.PatchSeries)},
 						{"Subject", p.Subject},
 					})
 					if len(p.Files) > 0 {

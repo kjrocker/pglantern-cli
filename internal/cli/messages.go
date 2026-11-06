@@ -84,7 +84,7 @@ func messageDetail(m api.MessageFull) {
 		fmt.Println()
 		rows := make([][]string, 0, len(m.Attachments))
 		for _, a := range m.Attachments {
-			rows = append(rows, []string{fmt.Sprint(a.ID), a.Filename, a.ContentType, patchCell(a.IsPatch)})
+			rows = append(rows, []string{fmt.Sprint(a.ID), a.Filename, a.ContentType, attachmentPatchCell(a)})
 		}
 		output.Table(os.Stdout, []string{"ATTACHMENT", "FILENAME", "TYPE", "PATCH"}, rows)
 	}
@@ -140,6 +140,32 @@ func patchCell(isPatch bool) string {
 		return "yes"
 	}
 	return "-"
+}
+
+// attachmentPatchCell is the PATCH column for a full message's attachment:
+// the series position when the server parsed one, "yes" for a patch with no
+// series tag, "-" for anything else.
+func attachmentPatchCell(a api.AttachmentRef) string {
+	if a.Patch == nil {
+		return patchCell(a.IsPatch)
+	}
+	if label := seriesLabel(*a.Patch); label != "-" {
+		return label
+	}
+	return "yes"
+}
+
+// seriesLabel renders a patch's series position — "v3 patch 2", "v3", or "-"
+// when the filename and subject carried no version tag.
+func seriesLabel(p api.PatchSeries) string {
+	if p.SeriesVersion == nil {
+		return "-"
+	}
+	label := fmt.Sprintf("v%d", *p.SeriesVersion)
+	if p.SeriesSeq != nil {
+		label = fmt.Sprintf("%s patch %d", label, *p.SeriesSeq)
+	}
+	return label
 }
 
 // commitHeader names the columns in the order commitRows emits them. Every
