@@ -119,6 +119,14 @@ func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 	return c.do(http.MethodGet, path, query, nil)
 }
 
+// GetText is Get for the endpoints that answer with a non-JSON body (patch
+// text from /attachments/<id>/raw): it returns those bytes untouched. Errors
+// still arrive as the JSON envelope, so application/json stays acceptable —
+// the server's :api pipeline 406s an Accept header that excludes it.
+func (c *Client) GetText(path string, query url.Values) ([]byte, error) {
+	return c.doAccept(http.MethodGet, path, query, nil, "text/plain, application/json;q=0.9")
+}
+
 // Post sends body as JSON to /api/v1/<path> and returns the raw response body
 // (201 {"data":…} on the watch endpoints).
 func (c *Client) Post(path string, body any) ([]byte, error) {
@@ -140,6 +148,10 @@ func (c *Client) Delete(path string) ([]byte, error) {
 // key, JSON-encode a non-nil body, and split 2xx bodies from the error
 // envelope. A 204 has no body to return, so it comes back as (nil, nil).
 func (c *Client) do(method, path string, query url.Values, body any) ([]byte, error) {
+	return c.doAccept(method, path, query, body, "application/json")
+}
+
+func (c *Client) doAccept(method, path string, query url.Values, body any, accept string) ([]byte, error) {
 	u := c.BaseURL + apiPrefix + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
@@ -159,7 +171,7 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 	if c.Key != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Key)
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", accept)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

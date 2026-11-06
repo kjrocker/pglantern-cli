@@ -288,3 +288,40 @@ func TestClientGetErrorEnvelope(t *testing.T) {
 		t.Errorf("got %+v", apiErr)
 	}
 }
+
+func TestClientGetText(t *testing.T) {
+	var gotAccept string
+	// Latin-1 é (0xE9) must survive: the body is bytes, not decoded text.
+	patch := "diff --git a/x b/x\n+caf\xe9\n"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAccept = r.Header.Get("Accept")
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(patch))
+	}))
+	defer srv.Close()
+
+	body, err := New(srv.URL, "k").GetText("/attachments/7/raw", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != patch {
+		t.Errorf("body = %q", body)
+	}
+	if !strings.Contains(gotAccept, "text/plain") || !strings.Contains(gotAccept, "application/json") {
+		t.Errorf("accept = %q (server 406s without application/json)", gotAccept)
+	}
+}
+
+func TestClientGetTextErrorEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"error":{"code":"not_found","message":"Not found"}}`))
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "k").GetText("/attachments/7/raw", nil)
+	var apiErr *Error
+	if !errors.As(err, &apiErr) || apiErr.Code != "not_found" {
+		t.Fatalf("want not_found *Error, got %T: %v", err, err)
+	}
+}
