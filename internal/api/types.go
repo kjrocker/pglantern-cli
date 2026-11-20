@@ -155,6 +155,7 @@ type SenderIdentity struct {
 type SenderFull struct {
 	SenderSummary
 	Identity *SenderIdentity  `json:"identity"`
+	Roles    []string         `json:"roles"`
 	Messages []MessagePreview `json:"messages"`
 }
 

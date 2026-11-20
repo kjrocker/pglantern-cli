@@ -115,7 +115,8 @@ var (
 	messageGroupScalars = []string{
 		"q-subject", "q-body", "has-attachment", "has-patch", "attachment-name",
 	}
-	messageGroupArrays = []string{"sender-id", "participant-id", "exclude-participant-id"}
+	messageGroupArrays = []string{"sender-id", "participant-id", "exclude-participant-id",
+		"sender-role", "participant-role", "exclude-participant-role"}
 
 	// threads only: message-group date bounds and the aggregates over matches.
 	threadMatchScalars = []string{
@@ -137,6 +138,9 @@ func addMessageGroupFlags(cmd *cobra.Command, subjectUsage, senderIDUsage string
 	f.StringArray("sender-id", nil, senderIDUsage+" (repeatable)")
 	f.StringArray("participant-id", nil, "thread where every given sender id posted somewhere (repeatable, all-of)")
 	f.StringArray("exclude-participant-id", nil, "drop threads where this sender id posted anywhere (repeatable)")
+	f.StringArray("sender-role", nil, "--sender-role committer: message is from a sender with this role (repeatable)")
+	f.StringArray("participant-role", nil, "--participant-role committer: a sender with this role posted in the thread (repeatable)")
+	f.StringArray("exclude-participant-role", nil, "--exclude-participant-role committer: drop threads where a sender with this role posted (repeatable)")
 }
 
 // addThreadMatchFlags registers the threads-only message-group bounds and

@@ -172,6 +172,10 @@ both. `--sender-id` is repeatable (any-of): `lantern senders get <id>` shows
 with `--sender-id 42 --q vacuum` (42's own message says vacuum), and
 `--sender-id 42 --min-patches 1` (the thread has a patch from anyone) with
 `--sender-id 42 --has-patch` (42's own message carries it).
+Contributor roles (today only `committer`, derived from git) mirror the id flags
+and are repeatable: `--sender-role` (the message's sender), `--participant-role`
+(a sender with the role posted in the thread), `--exclude-participant-role`
+(none did). `senders get` shows `Roles`.
 `commits` adds `--q` (substring over the commit message),
 `--path`, `--author`, `--major`, and its own sort pair:
 `--sort committed|authored` with `--dir asc|desc` (server default
