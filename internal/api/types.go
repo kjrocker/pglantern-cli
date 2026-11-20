@@ -145,8 +145,16 @@ type MessagePreview struct {
 	SentAt    string `json:"sent_at"`
 }
 
+// SenderIdentity lists every sender id whose display name folds to the same
+// identity key — one person's addresses, for sender_id[] / participant_id[].
+type SenderIdentity struct {
+	Key       string `json:"key"`
+	SenderIDs []int  `json:"sender_ids"`
+}
+
 type SenderFull struct {
 	SenderSummary
+	Identity *SenderIdentity  `json:"identity"`
 	Messages []MessagePreview `json:"messages"`
 }
 

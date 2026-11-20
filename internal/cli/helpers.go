@@ -109,7 +109,49 @@ var (
 	threadFilterArrays = []string{
 		"list", "exclude-list", "starter-id", "last-sender-id", "exclude-starter-id",
 	}
+
+	// The message group and participants: on search they describe the returned
+	// message (participants: its thread), on threads one member message.
+	messageGroupScalars = []string{
+		"q-subject", "q-body", "has-attachment", "has-patch", "attachment-name",
+	}
+	messageGroupArrays = []string{"sender-id", "participant-id", "exclude-participant-id"}
+
+	// threads only: message-group date bounds and the aggregates over matches.
+	threadMatchScalars = []string{
+		"posted-from", "posted-to", "min-matches", "max-matches",
+		"match-first-from", "match-first-to", "match-last-from", "match-last-to",
+	}
 )
+
+// addMessageGroupFlags registers the message-group and participant filters
+// shared by `search` and `threads`. subjectUsage says what --q-subject means
+// (the message's subject on search, the thread's on threads).
+func addMessageGroupFlags(cmd *cobra.Command, subjectUsage, senderIDUsage string) {
+	f := cmd.Flags()
+	f.String("q-subject", "", subjectUsage)
+	f.String("q-body", "", "full-text over the message body only")
+	f.Bool("has-attachment", false, "message carries an attachment (--has-attachment=false for none)")
+	f.Bool("has-patch", false, "message carries a parsed patch (--has-patch=false for none)")
+	f.String("attachment-name", "", "message has an attachment whose filename contains this")
+	f.StringArray("sender-id", nil, senderIDUsage+" (repeatable)")
+	f.StringArray("participant-id", nil, "thread where every given sender id posted somewhere (repeatable, all-of)")
+	f.StringArray("exclude-participant-id", nil, "drop threads where this sender id posted anywhere (repeatable)")
+}
+
+// addThreadMatchFlags registers the threads-only message-group bounds and
+// aggregates (min/max matching messages, first/last match dates).
+func addThreadMatchFlags(cmd *cobra.Command) {
+	f := cmd.Flags()
+	f.String("posted-from", "", "a matching message sent on/after this date (ISO-8601)")
+	f.String("posted-to", "", "a matching message sent on/before this date (ISO-8601)")
+	f.Int("min-matches", 0, "at least this many messages match the message filters (needs one)")
+	f.Int("max-matches", 0, "at most this many messages match the message filters (needs one)")
+	f.String("match-first-from", "", "earliest matching message on/after this date (needs a message filter)")
+	f.String("match-first-to", "", "earliest matching message on/before this date (needs a message filter)")
+	f.String("match-last-from", "", "latest matching message on/after this date (needs a message filter)")
+	f.String("match-last-to", "", "latest matching message on/before this date (needs a message filter)")
+}
 
 // addThreadFilterFlags registers the shared thread-level filters. `listUsage`
 // says what --list means on the command (thread- vs message-level).
