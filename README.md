@@ -88,6 +88,7 @@ lantern search vacuum --cf-status needs_review # threads whose patch is in that 
 lantern commitfests                     # commitfests, newest first
 lantern commitfests patches 52 --status ready_for_committer
 lantern commitfests patch 4242          # history, cited threads, landed commits
+lantern commitfests open 52             # jump to the commitfest app page (--patch <id> for a patch, --site for pgLantern)
 lantern attachments --sort size         # biggest first; also --sort date
 lantern attachments patch 1234          # parsed patch summary
 lantern attachments raw 1234 > a.patch  # the patch text itself (patches only)

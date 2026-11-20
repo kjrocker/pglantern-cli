@@ -113,6 +113,7 @@ Start from whichever entity the question is about:
 | Commitfests, newest first                  | `lantern commitfests`                                           |
 | One commitfest's patches                   | `lantern commitfests patches 52 --status ready_for_committer`   |
 | One patch: history, threads, commits       | `lantern commitfests patch 4242`                                |
+| Open a commitfest or patch page            | `lantern commitfests open 52` / `open --patch 4242`             |
 | People who post                            | `lantern senders --sort messages --dir desc`                    |
 | Senders who started posting in 2015        | `lantern senders --first-from 2015-01-01 --first-to 2015-12-31` |
 | Message volume over time                   | `lantern analytics messages --interval month --from 2024-01-01` |
@@ -155,12 +156,14 @@ date instead). `commits get` takes a full 40-hex sha **or** any unambiguous
 prefix (≥ 4 hex, git-style); an ambiguous prefix errors and asks for more
 characters.
 
-`messages open` / `commits open` launch the entity's **upstream** archive page
-(`postgr.es/m/…`, `postgr.es/c/…`) in the default browser; `--site` opens the
+`messages open` / `commits open` / `commitfests open` launch the entity's
+**upstream** page (`postgr.es/m/…`, `postgr.es/c/…`,
+`commitfest.postgresql.org/…`) in the default browser; `--site` opens the
 pgLantern page instead, and `--print` emits the resolved URL to stdout rather
-than opening anything (use it in headless/SSH/CI). A Message-Id and a full
-40-hex sha are turned into a URL locally with no request; only a **short sha
-prefix** calls the API, to resolve it server-side.
+than opening anything (use it in headless/SSH/CI). `commitfests open` takes a
+commitfest id, or a patch id with `--patch`. A Message-Id, a full 40-hex sha
+and a commitfest/patch id are turned into a URL locally with no request; only a
+**short sha prefix** calls the API, to resolve it server-side.
 
 The `analytics` subcommands are bounded aggregates — no cursors, no pagination
 flags. The two series (`messages`, `senders`) take
