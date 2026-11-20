@@ -141,3 +141,47 @@ func TestCommitOpenPrefixHitsAPI(t *testing.T) {
 		t.Errorf("site url = %q, want %q", got, wantHTML)
 	}
 }
+
+func TestCommitfestOpenPrint(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+	}))
+	defer srv.Close()
+
+	tests := []struct {
+		args []string
+		want string
+	}{
+		{[]string{"52"}, "https://commitfest.postgresql.org/52/"},
+		{[]string{"52", "--site"}, srv.URL + "/commitfests/52"},
+		{[]string{"4242", "--patch"}, "https://commitfest.postgresql.org/patch/4242/"},
+		{[]string{"4242", "--patch", "--site"}, srv.URL + "/cf-patches/4242"},
+	}
+	for _, tt := range tests {
+		out := captureStdout(t, func() {
+			root := NewRootCmd()
+			args := append([]string{"commitfests", "open", "--print", "--host", srv.URL + "/"}, tt.args...)
+			root.SetArgs(args)
+			if err := root.Execute(); err != nil {
+				t.Fatal(err)
+			}
+		})
+		if got := strings.TrimSpace(out); got != tt.want {
+			t.Errorf("%v: url = %q, want %q", tt.args, got, tt.want)
+		}
+	}
+	if hits != 0 {
+		t.Errorf("commitfests open hit the server %d times, want 0", hits)
+	}
+}
+
+func TestCommitfestOpenRejectsNonIntegerID(t *testing.T) {
+	for _, id := range []string{"abc", "0", "-3", "052", "4.2"} {
+		root := NewRootCmd()
+		root.SetArgs([]string{"commitfests", "open", "--print", id})
+		if err := root.Execute(); err == nil {
+			t.Errorf("commitfests open %q: want error, got nil", id)
+		}
+	}
+}

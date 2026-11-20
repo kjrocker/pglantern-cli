@@ -88,7 +88,7 @@ func newCommitfestsCmd() *cobra.Command {
 		},
 	}
 	addPaginationFlags(cmd)
-	cmd.AddCommand(newCommitfestsPatchesCmd(), newCommitfestsPatchCmd())
+	cmd.AddCommand(newCommitfestsPatchesCmd(), newCommitfestsPatchCmd(), newCommitfestsOpenCmd())
 	return cmd
 }
 
@@ -124,6 +124,34 @@ func newCommitfestsPatchesCmd() *cobra.Command {
 	}
 	addEnumFlag(cmd, "status", "only entries with this status", cfStatuses...)
 	addPaginationFlags(cmd)
+	return cmd
+}
+
+func newCommitfestsOpenCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "open <commitfest-id>",
+		Short: "Open a commitfest's commitfest.postgresql.org page (--patch for a patch, --site for pgLantern)",
+		Args:  requireArg("a commitfest id (or a patch id with --patch)"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id := args[0]
+			patch, _ := cmd.Flags().GetBool("patch")
+			if !isCfID(id) {
+				kind := "commitfest"
+				if patch {
+					kind = "patch"
+				}
+				return fmt.Errorf("%s id must be a positive integer, got %q", kind, id)
+			}
+			// Ids map straight onto both URL shapes — no API call.
+			host := hostFor(cmd)
+			if patch {
+				return openURL(cmd, cfPatchArchiveURL(id), cfPatchSiteURL(host, id))
+			}
+			return openURL(cmd, commitfestArchiveURL(id), commitfestSiteURL(host, id))
+		},
+	}
+	cmd.Flags().Bool("patch", false, "treat the id as a commitfest patch id")
+	addOpenFlags(cmd)
 	return cmd
 }
 

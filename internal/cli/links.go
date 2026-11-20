@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strconv"
 	"strings"
 )
 
@@ -51,6 +52,25 @@ func messageSiteURL(host, id string) string {
 }
 func commitArchiveURL(sha string) string    { return archiveBase + "/c/" + sha }
 func commitSiteURL(host, sha string) string { return trimHost(host) + "/commits/" + sha }
+
+const cfAppBase = "https://commitfest.postgresql.org"
+
+// Commitfest and cf-patch ids are the upstream app's numeric ids.
+func commitfestArchiveURL(id string) string { return cfAppBase + "/" + id + "/" }
+func commitfestSiteURL(host, id string) string {
+	return trimHost(host) + "/commitfests/" + id
+}
+func cfPatchArchiveURL(id string) string { return cfAppBase + "/patch/" + id + "/" }
+func cfPatchSiteURL(host, id string) string {
+	return trimHost(host) + "/cf-patches/" + id
+}
+
+// isCfID reports whether s is a positive decimal id, the only shape the
+// commitfest pages route on — anything else would open a 404.
+func isCfID(s string) bool {
+	n, err := strconv.Atoi(s)
+	return err == nil && n > 0 && strconv.Itoa(n) == s
+}
 
 // trimHost drops a trailing slash so we never emit `//messages`.
 func trimHost(host string) string { return strings.TrimRight(host, "/") }
