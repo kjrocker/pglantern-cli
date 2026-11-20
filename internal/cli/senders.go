@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
 	"git.kehvyn.dev/kevin/pglantern-cli/internal/output"
@@ -106,6 +107,7 @@ func newSendersGetCmd() *cobra.Command {
 						{"First message", firstID},
 						{"Last", last},
 						{"Last message", lastID},
+						{"Identity ids", identityIDsCell(s.Identity)},
 					})
 					if len(s.Messages) > 0 {
 						fmt.Println()
@@ -120,4 +122,17 @@ func newSendersGetCmd() *cobra.Command {
 				})
 		},
 	}
+}
+
+// identityIDsCell lists the sender ids that share this sender's identity, the
+// set to hand to --sender-id / --participant-id for the whole person.
+func identityIDsCell(i *api.SenderIdentity) string {
+	if i == nil || len(i.SenderIDs) == 0 {
+		return "-"
+	}
+	ids := make([]string, len(i.SenderIDs))
+	for n, id := range i.SenderIDs {
+		ids[n] = strconv.Itoa(id)
+	}
+	return strings.Join(ids, ", ")
 }

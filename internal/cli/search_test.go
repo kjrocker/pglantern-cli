@@ -36,3 +36,32 @@ func TestSearchSingleListStaysPlain(t *testing.T) {
 		t.Errorf("query = %q", query)
 	}
 }
+
+func TestSearchMessageGroupFlags(t *testing.T) {
+	_, query, _ := runStub(t, `{"data":[]}`, "search",
+		"--q-body", "deadlock", "--q-subject", "lock", "--sender-id", "48", "--sender-id", "7",
+		"--has-patch", "--has-attachment=false", "--attachment-name", "v2",
+		"--participant-id", "9", "--exclude-participant-id", "3", "--exclude-participant-id", "4")
+	got, err := url.ParseQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"q_body":                   {"deadlock"},
+		"q_subject":                {"lock"},
+		"sender_id[]":              {"48", "7"},
+		"has_patch":                {"true"},
+		"has_attachment":           {"false"},
+		"attachment_name":          {"v2"},
+		"participant_id":           {"9"},
+		"exclude_participant_id[]": {"3", "4"},
+	}
+	for k, v := range want {
+		if !reflect.DeepEqual(got[k], v) {
+			t.Errorf("%s = %v, want %v (query %q)", k, got[k], v, query)
+		}
+	}
+	if _, ok := got["q"]; ok {
+		t.Errorf("q sent without a positional query: %q", query)
+	}
+}

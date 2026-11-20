@@ -8,16 +8,18 @@ import (
 
 func newSearchCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "search <query>...",
-		Short: "Full-text search over messages",
-		Args:  requireArgs("a search query"),
+		Use:   "search [query]...",
+		Short: "Full-text search over messages (a query, --q-subject or --q-body is required)",
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, append([]string{
 				"sort", "dir", "sender", "committed", "path", "major", "cf-status",
 				"from", "to", "limit", "after", "before",
-			}, threadFilterScalars...)...)
-			collectArrayQuery(cmd, q, threadFilterArrays...)
-			q.Set("q", strings.Join(args, " "))
+			}, append(threadFilterScalars, messageGroupScalars...)...)...)
+			collectArrayQuery(cmd, q, append(threadFilterArrays, messageGroupArrays...)...)
+			if len(args) > 0 {
+				q.Set("q", strings.Join(args, " "))
+			}
 			return renderMessagePage(cmd, "/search", q, true)
 		},
 	}
@@ -33,6 +35,9 @@ func newSearchCmd() *cobra.Command {
 	addThreadFilterFlags(cmd,
 		"messages posted to any of these lists",
 		"drop messages posted to this list")
+	addMessageGroupFlags(cmd,
+		"full-text over the message subject only",
+		"message is from any of these sender ids")
 	addPaginationFlags(cmd)
 	addFullFlag(cmd)
 	return cmd

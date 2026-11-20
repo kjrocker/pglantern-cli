@@ -84,6 +84,8 @@ lantern threads vacuum --from 2024-01-01       # discussion threads, newest acti
 lantern threads --sort messages --dir desc     # busiest threads first
 lantern threads --list pgsql-hackers           # threads with a message on this list (stats stay whole-thread)
 lantern threads --min-patches 1 --min-participants 10  # thread-level filters, also on search
+lantern threads --sender-id 42 --min-matches 10 --has-patch  # 42 wrote 10+ messages, one with a patch
+lantern search --q-body deadlock --participant-id 42   # no query needed: any of q, --q-subject, --q-body
 lantern messages commitfest '<message-id>'     # commitfest patches attached to its thread
 lantern search vacuum --cf-status needs_review # threads whose patch is in that commitfest status
 lantern commitfests                     # commitfests, newest first

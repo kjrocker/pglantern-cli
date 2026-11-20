@@ -157,6 +157,21 @@ over the whole thread (on `search` a message matches when its thread does):
 start), and the repeatable sender ids `--starter-id`, `--last-sender-id`,
 `--exclude-starter-id`. `threads` also takes `--committed`, `--path` and
 `--major`. On `search`, `--list`/`--exclude-list` match the message's own lists.
+The message group (`--q-body`, `--sender-id`, `--has-attachment`,
+`--has-patch`, `--attachment-name`) describes one message: the returned message
+on `search` (where `--q-subject` is the message subject and any one of the
+query, `--q-subject`, `--q-body` is enough), one member message on `threads`
+(where `--q-subject` is the thread subject, and `--sender`, `--posted-from`/`--posted-to`
+join the group). `threads` aggregates over the matching messages with
+`--min-matches`/`--max-matches` and `--match-first-from`/`-to`,
+`--match-last-from`/`-to` (a 422 without a message-group flag).
+`--participant-id` (all-of) and `--exclude-participant-id` are thread-level on
+both. `--sender-id` is repeatable (any-of): `lantern senders get <id>` shows
+`Identity ids`, every id of the same person, to pass here. Contrast
+`--participant-id 42 --q vacuum` (42 posted in the thread, vacuum anywhere)
+with `--sender-id 42 --q vacuum` (42's own message says vacuum), and
+`--sender-id 42 --min-patches 1` (the thread has a patch from anyone) with
+`--sender-id 42 --has-patch` (42's own message carries it).
 `commits` adds `--q` (substring over the commit message),
 `--path`, `--author`, `--major`, and its own sort pair:
 `--sort committed|authored` with `--dir asc|desc` (server default

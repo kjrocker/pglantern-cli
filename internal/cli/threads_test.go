@@ -3,6 +3,7 @@ package cli
 import (
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
@@ -84,5 +85,40 @@ func TestThreadsUnsetFiltersSendNothing(t *testing.T) {
 	_, query, _ := runStub(t, `{"data":[]}`, "threads", "--limit", "5")
 	if query != "limit=5" {
 		t.Errorf("query = %q", query)
+	}
+}
+
+func TestThreadsMessageGroupFlags(t *testing.T) {
+	_, query, _ := runStub(t, `{"data":[]}`, "threads", "vacuum",
+		"--sender-id", "48", "--min-matches", "10", "--min-patches", "1", "--has-patch",
+		"--posted-from", "2025-01-01", "--match-last-to", "2025-12-31",
+		"--q-subject", "logical replication", "--participant-id", "7", "--participant-id", "8")
+	got, err := url.ParseQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"q":                {"vacuum"},
+		"sender_id":        {"48"},
+		"min_matches":      {"10"},
+		"min_patches":      {"1"},
+		"has_patch":        {"true"},
+		"posted_from":      {"2025-01-01"},
+		"match_last_to":    {"2025-12-31"},
+		"q_subject":        {"logical replication"},
+		"participant_id[]": {"7", "8"},
+	}
+	for k, v := range want {
+		if !reflect.DeepEqual(got[k], v) {
+			t.Errorf("%s = %v, want %v (query %q)", k, got[k], v, query)
+		}
+	}
+}
+
+func TestSendersGetShowsIdentity(t *testing.T) {
+	_, _, out := runStub(t, `{"data":{"id":48,"email":"a@b","display_name":"Tom Lane","stats":null,"messages":[],"identity":{"key":"tom lane","sender_ids":[48,901]}}}`,
+		"senders", "get", "48")
+	if !strings.Contains(out, "48, 901") {
+		t.Errorf("out = %q", out)
 	}
 }

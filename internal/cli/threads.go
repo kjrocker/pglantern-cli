@@ -37,9 +37,9 @@ func newThreadsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := collectQuery(cmd, append([]string{
 				"q", "sort", "dir", "cf-status", "committed", "path", "major",
-				"from", "to", "limit", "after", "before",
-			}, threadFilterScalars...)...)
-			collectArrayQuery(cmd, q, threadFilterArrays...)
+				"from", "to", "sender", "limit", "after", "before",
+			}, append(append(threadFilterScalars, messageGroupScalars...), threadMatchScalars...)...)...)
+			collectArrayQuery(cmd, q, append(threadFilterArrays, messageGroupArrays...)...)
 			if err := positionalQuery(cmd, args, q); err != nil {
 				return err
 			}
@@ -77,6 +77,11 @@ func newThreadsCmd() *cobra.Command {
 	addThreadFilterFlags(cmd,
 		"threads with a message on any of these lists (stats stay whole-thread)",
 		"drop threads with any message on this list")
+	addMessageGroupFlags(cmd,
+		"full-text over the thread subject",
+		"a member message is from any of these sender ids")
+	addThreadMatchFlags(cmd)
+	cmd.Flags().String("sender", "", "a member message's sender email or name contains this")
 	addPaginationFlags(cmd)
 	return cmd
 }
