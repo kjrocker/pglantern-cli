@@ -72,6 +72,68 @@ func collectQuery(cmd *cobra.Command, names ...string) url.Values {
 	return q
 }
 
+// collectArrayQuery adds each changed repeatable (StringArray) flag to q: two
+// or more values as `key[]=v` pairs — a bare repeated `key=` would collapse to
+// its last value server-side — and a lone value as a plain `key=v`, which the
+// API takes as a one-element list (and which servers predating the list form,
+// where e.g. `list` was a single name, still accept). The server trims, drops
+// blanks and de-dupes, so values pass through untouched.
+func collectArrayQuery(cmd *cobra.Command, q url.Values, names ...string) {
+	for _, name := range names {
+		if !cmd.Flags().Changed(name) {
+			continue
+		}
+		values, err := cmd.Flags().GetStringArray(name)
+		if err != nil {
+			continue
+		}
+		key := strings.ReplaceAll(name, "-", "_")
+		if len(values) == 1 {
+			q.Set(key, values[0])
+			continue
+		}
+		for _, v := range values {
+			q.Add(key+"[]", v)
+		}
+	}
+}
+
+// Thread-level filters shared by `threads` and `search` (computed over the
+// whole thread on both; on search a message matches when its thread does).
+var (
+	threadFilterScalars = []string{
+		"min-messages", "max-messages", "min-participants", "max-participants",
+		"min-attachments", "max-attachments", "min-patches", "max-patches",
+		"first-from", "first-to",
+	}
+	threadFilterArrays = []string{
+		"list", "exclude-list", "starter-id", "last-sender-id", "exclude-starter-id",
+	}
+)
+
+// addThreadFilterFlags registers the shared thread-level filters. `listUsage`
+// says what --list means on the command (thread- vs message-level).
+func addThreadFilterFlags(cmd *cobra.Command, listUsage, excludeListUsage string) {
+	f := cmd.Flags()
+	for _, c := range []struct{ stem, what string }{
+		{"messages", "messages in the thread"},
+		{"participants", "distinct senders in the thread"},
+		{"attachments", "attachment files in the thread (patches included)"},
+		{"patches", "patch files in the thread"},
+	} {
+		f.Int("min-"+c.stem, 0, "at least this many "+c.what)
+		f.Int("max-"+c.stem, 0, "at most this many "+c.what)
+	}
+	f.String("first-from", "", "threads started on/after this date (ISO-8601)")
+	f.String("first-to", "", "threads started on/before this date (ISO-8601)")
+	// StringArray, not StringSlice: the server never splits on commas.
+	f.StringArray("list", nil, listUsage+" (repeatable)")
+	f.StringArray("exclude-list", nil, excludeListUsage+" (repeatable)")
+	f.StringArray("starter-id", nil, "threads started by this sender id (repeatable)")
+	f.StringArray("last-sender-id", nil, "threads whose latest message is from this sender id (repeatable)")
+	f.StringArray("exclude-starter-id", nil, "drop threads started by this sender id (repeatable)")
+}
+
 // addIDFlag registers the --id flag that puts a collection command into the
 // server's exact-IDs mode. StringArray, not StringSlice: StringSlice splits on
 // commas, and the server never splits — `a,b` is one literal id there, so

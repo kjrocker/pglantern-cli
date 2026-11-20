@@ -110,6 +110,7 @@ Start from whichever entity the question is about:
 | Discussion threads, newest activity        | `lantern threads vacuum --from 2024-01-01`                      |
 | Busiest threads first                      | `lantern threads --sort messages --dir desc`                    |
 | Threads whose patch awaits review          | `lantern search vacuum --cf-status needs_review`                |
+| Big multi-voice patch threads              | `lantern threads --min-patches 1 --min-participants 10`         |
 | Commitfests, newest first                  | `lantern commitfests`                                           |
 | One commitfest's patches                   | `lantern commitfests patches 52 --status ready_for_committer`   |
 | One patch: history, threads, commits       | `lantern commitfests patch 4242`                                |
@@ -148,7 +149,15 @@ that list) and `--first-from`/`--first-to`/`--last-from`/`--last-to`
 (inclusive ISO-8601 bounds on first/last post date, per-list with `--list`). `threads` also adds `--list`, but unlike `senders` it doesn't scope
 the stats: a matching thread is shown whole, with its true
 `message_count`/`first`/`last activity` across every list it touched, not just
-the one filtered on. `commits` adds `--q` (substring over the commit message),
+the one filtered on. `--list` is repeatable (any of the lists), as is
+`--exclude-list`. `threads` and `search` share thread-level filters, computed
+over the whole thread (on `search` a message matches when its thread does):
+`--min-`/`--max-messages`, `-participants` (distinct senders), `-attachments`,
+`-patches` (files anywhere in the thread), `--first-from`/`--first-to` (thread
+start), and the repeatable sender ids `--starter-id`, `--last-sender-id`,
+`--exclude-starter-id`. `threads` also takes `--committed`, `--path` and
+`--major`. On `search`, `--list`/`--exclude-list` match the message's own lists.
+`commits` adds `--q` (substring over the commit message),
 `--path`, `--author`, `--major`, and its own sort pair:
 `--sort committed|authored` with `--dir asc|desc` (server default
 `committed`/`desc`; under `--sort authored` the date column shows the author

@@ -12,14 +12,15 @@ func newSearchCmd() *cobra.Command {
 		Short: "Full-text search over messages",
 		Args:  requireArgs("a search query"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := collectQuery(cmd,
-				"list", "sort", "dir", "sender", "committed", "path", "major", "cf-status",
-				"from", "to", "limit", "after", "before")
+			q := collectQuery(cmd, append([]string{
+				"sort", "dir", "sender", "committed", "path", "major", "cf-status",
+				"from", "to", "limit", "after", "before",
+			}, threadFilterScalars...)...)
+			collectArrayQuery(cmd, q, threadFilterArrays...)
 			q.Set("q", strings.Join(args, " "))
 			return renderMessagePage(cmd, "/search", q, true)
 		},
 	}
-	cmd.Flags().String("list", "", "restrict to one mailing list by name")
 	addEnumFlag(cmd, "sort", "sort order", "relevance", "sent_at")
 	addEnumFlag(cmd, "dir", "sort direction, only with --sort sent_at", "asc", "desc")
 	cmd.Flags().String("sender", "", "substring match on sender email or name")
@@ -29,6 +30,9 @@ func newSearchCmd() *cobra.Command {
 	addEnumFlag(cmd, "cf-status", "threads with a commitfest patch in this status", cfSearchStatuses...)
 	cmd.Flags().String("from", "", "ISO-8601 lower bound on sent_at")
 	cmd.Flags().String("to", "", "ISO-8601 upper bound on sent_at")
+	addThreadFilterFlags(cmd,
+		"messages posted to any of these lists",
+		"drop messages posted to this list")
 	addPaginationFlags(cmd)
 	addFullFlag(cmd)
 	return cmd
