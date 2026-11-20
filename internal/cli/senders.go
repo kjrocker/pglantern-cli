@@ -108,6 +108,7 @@ func newSendersGetCmd() *cobra.Command {
 						{"Last", last},
 						{"Last message", lastID},
 						{"Identity ids", identityIDsCell(s.Identity)},
+						{"Roles", rolesCell(s.Roles)},
 					})
 					if len(s.Messages) > 0 {
 						fmt.Println()
@@ -135,4 +136,12 @@ func identityIDsCell(i *api.SenderIdentity) string {
 		ids[n] = strconv.Itoa(id)
 	}
 	return strings.Join(ids, ", ")
+}
+
+// rolesCell lists the roles the sender holds (e.g. committer), "-" for none.
+func rolesCell(roles []string) string {
+	if len(roles) == 0 {
+		return "-"
+	}
+	return strings.Join(roles, ", ")
 }

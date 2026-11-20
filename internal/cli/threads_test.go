@@ -122,3 +122,31 @@ func TestSendersGetShowsIdentity(t *testing.T) {
 		t.Errorf("out = %q", out)
 	}
 }
+
+func TestThreadsRoleFlags(t *testing.T) {
+	_, query, _ := runStub(t, `{"data":[]}`, "threads",
+		"--sender-role", "committer", "--sender-role", "other", "--participant-role", "committer",
+		"--exclude-participant-role", "committer")
+	got, err := url.ParseQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"sender_role[]":            {"committer", "other"},
+		"participant_role":         {"committer"},
+		"exclude_participant_role": {"committer"},
+	}
+	for k, v := range want {
+		if !reflect.DeepEqual(got[k], v) {
+			t.Errorf("%s = %v, want %v (query %q)", k, got[k], v, query)
+		}
+	}
+}
+
+func TestSendersGetShowsRoles(t *testing.T) {
+	_, _, out := runStub(t, `{"data":{"id":48,"email":"a@b","display_name":"Tom Lane","stats":null,"messages":[],"roles":["committer"]}}`,
+		"senders", "get", "48")
+	if !strings.Contains(out, "committer") {
+		t.Errorf("out = %q", out)
+	}
+}

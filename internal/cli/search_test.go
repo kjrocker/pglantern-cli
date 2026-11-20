@@ -37,6 +37,26 @@ func TestSearchSingleListStaysPlain(t *testing.T) {
 	}
 }
 
+func TestSearchRoleFlags(t *testing.T) {
+	_, query, _ := runStub(t, `{"data":[]}`, "search", "vacuum",
+		"--sender-role", "committer", "--participant-role", "committer", "--participant-role", "other",
+		"--exclude-participant-role", "committer")
+	got, err := url.ParseQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"sender_role":              {"committer"},
+		"participant_role[]":       {"committer", "other"},
+		"exclude_participant_role": {"committer"},
+	}
+	for k, v := range want {
+		if !reflect.DeepEqual(got[k], v) {
+			t.Errorf("%s = %v, want %v (query %q)", k, got[k], v, query)
+		}
+	}
+}
+
 func TestSearchMessageGroupFlags(t *testing.T) {
 	_, query, _ := runStub(t, `{"data":[]}`, "search",
 		"--q-body", "deadlock", "--q-subject", "lock", "--sender-id", "48", "--sender-id", "7",
