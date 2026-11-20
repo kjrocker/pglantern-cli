@@ -83,6 +83,7 @@ lantern senders get 42
 lantern threads vacuum --from 2024-01-01       # discussion threads, newest activity first
 lantern threads --sort messages --dir desc     # busiest threads first
 lantern threads --list pgsql-hackers           # threads with a message on this list (stats stay whole-thread)
+lantern threads --min-patches 1 --min-participants 10  # thread-level filters, also on search
 lantern messages commitfest '<message-id>'     # commitfest patches attached to its thread
 lantern search vacuum --cf-status needs_review # threads whose patch is in that commitfest status
 lantern commitfests                     # commitfests, newest first

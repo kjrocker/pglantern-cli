@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"net/url"
+	"reflect"
 	"testing"
 
 	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
@@ -39,5 +41,48 @@ func TestThreadStarterCell(t *testing.T) {
 				t.Errorf("threadStarterCell() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestThreadsFilterFlags(t *testing.T) {
+	_, query, _ := runStub(t, `{"data":[]}`, "threads",
+		"--min-messages", "51", "--max-patches", "3", "--min-participants", "11",
+		"--first-from", "2025-01-01", "--first-to", "2025-06-30",
+		"--list", "pgsql-hackers", "--list", "pgsql-bugs", "--exclude-list", "pgsql-general",
+		"--starter-id", "48", "--last-sender-id", "7", "--exclude-starter-id", "9",
+		"--committed=false", "--path", "src/backend/", "--major", "18")
+	got, err := url.ParseQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"min_messages":       {"51"},
+		"max_patches":        {"3"},
+		"min_participants":   {"11"},
+		"first_from":         {"2025-01-01"},
+		"first_to":           {"2025-06-30"},
+		"list[]":             {"pgsql-hackers", "pgsql-bugs"},
+		"exclude_list":       {"pgsql-general"},
+		"starter_id":         {"48"},
+		"last_sender_id":     {"7"},
+		"exclude_starter_id": {"9"},
+		"committed":          {"false"},
+		"path":               {"src/backend/"},
+		"major":              {"18"},
+	}
+	for k, v := range want {
+		if !reflect.DeepEqual(got[k], v) {
+			t.Errorf("%s = %v, want %v (query %q)", k, got[k], v, query)
+		}
+	}
+	if _, ok := got["list"]; ok {
+		t.Errorf("bare list= sent alongside list[]: %q", query)
+	}
+}
+
+func TestThreadsUnsetFiltersSendNothing(t *testing.T) {
+	_, query, _ := runStub(t, `{"data":[]}`, "threads", "--limit", "5")
+	if query != "limit=5" {
+		t.Errorf("query = %q", query)
 	}
 }

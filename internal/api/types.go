@@ -158,13 +158,16 @@ type ThreadStarter struct {
 }
 
 type ThreadSummary struct {
-	ThreadID       string         `json:"thread_id"`
-	Subject        string         `json:"subject"`
-	MessageCount   int            `json:"message_count"`
-	StartedAt      string         `json:"started_at"`
-	LastActivityAt string         `json:"last_activity_at"`
-	LastMessageID  *string        `json:"last_message_id"`
-	Starter        *ThreadStarter `json:"starter"`
+	ThreadID         string         `json:"thread_id"`
+	Subject          string         `json:"subject"`
+	MessageCount     int            `json:"message_count"`
+	ParticipantCount int            `json:"participant_count"`
+	AttachmentCount  int            `json:"attachment_count"`
+	PatchCount       int            `json:"patch_count"`
+	StartedAt        string         `json:"started_at"`
+	LastActivityAt   string         `json:"last_activity_at"`
+	LastMessageID    *string        `json:"last_message_id"`
+	Starter          *ThreadStarter `json:"starter"`
 }
 
 type AttachmentRow struct {

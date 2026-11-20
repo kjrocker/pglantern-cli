@@ -35,7 +35,11 @@ func newThreadsCmd() *cobra.Command {
 		Short: "Browse discussion threads across the lists",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := collectQuery(cmd, "q", "list", "sort", "dir", "cf-status", "from", "to", "limit", "after", "before")
+			q := collectQuery(cmd, append([]string{
+				"q", "sort", "dir", "cf-status", "committed", "path", "major",
+				"from", "to", "limit", "after", "before",
+			}, threadFilterScalars...)...)
+			collectArrayQuery(cmd, q, threadFilterArrays...)
 			if err := positionalQuery(cmd, args, q); err != nil {
 				return err
 			}
@@ -62,12 +66,17 @@ func newThreadsCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("q", "", "substring on subject or full-text over member messages")
-	cmd.Flags().String("list", "", "restrict to threads with a message on this list (stats stay whole-thread)")
 	addEnumFlag(cmd, "sort", "sort key", "messages", "first", "last")
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	addEnumFlag(cmd, "cf-status", "threads with a commitfest patch in this status", cfSearchStatuses...)
 	cmd.Flags().String("from", "", "only threads active on/after this date (ISO-8601)")
 	cmd.Flags().String("to", "", "only threads active on/before this date (ISO-8601)")
+	cmd.Flags().Bool("committed", false, "only threads with a landed commit (--committed=false for none)")
+	cmd.Flags().String("path", "", "threads whose landed commit or patch touches this path prefix")
+	cmd.Flags().String("major", "", "threads that landed a commit first shipped in this major (16, 9.6, master)")
+	addThreadFilterFlags(cmd,
+		"threads with a message on any of these lists (stats stay whole-thread)",
+		"drop threads with any message on this list")
 	addPaginationFlags(cmd)
 	return cmd
 }
