@@ -221,6 +221,8 @@ lantern watches create --type path --path src/backend/access/ --major 17
 lantern watches create --type guc --name work_mem
 lantern watches create --type query --q io_uring --list pgsql-hackers --cadence weekly
 lantern watches create --type query --q io_uring --channel webhook --endpoint <uuid>
+lantern watches create --type query --sender-role committer --has-patch --list pgsql-hackers
+lantern watches create --type thread_query --sender-id 42 --min-matches 3
 lantern watches pause <id>        # stop delivering; `resume` puts it back
 lantern watches cadence <id> weekly
 lantern watches delete <id>       # no confirmation prompt
@@ -228,11 +230,17 @@ lantern watches endpoints         # ID URL STATUS — your webhook targets
 ```
 
 `--type` selects both what is watched and which subject flag applies: thread →
-`--message-id`, sender → `--sender-id` (integer), path → `--path` (plus optional
-`--major`), guc → `--name`, query → `--q` (plus optional `--list`, `--sender`).
-A valid `--type` and its subject flag are the only things checked locally (usage
-error, exit 2); everything else — watch limits, webhook entitlement, endpoint
-ownership — is the server's 422/403, printed verbatim.
+`--message-id`, sender → `--sender-id` (one integer), path → `--path` (plus
+optional `--major`), guc → `--name`. The two filter types take the same filter
+flags as `search` and `threads`, and need at least one (`--q` is optional):
+`query` fires on each new message `lantern search <filters>` would return;
+`thread_query` (with the threads-only `--min-matches`, `--posted-from`, …)
+fires on each thread that matches `lantern threads <filters>` and gets a new
+message. There is no `--from`/`--to` — a watch matches from creation on. A valid
+`--type` and its subject (or one filter) are the only things checked locally
+(usage error, exit 2); everything else — an unknown or invalid filter, an
+unknown list, watch limits, webhook entitlement, endpoint ownership — is the
+server's 422/403, printed verbatim.
 
 `--channel` defaults to `email`. Email watches carry a **cadence**: `daily`
 sends one email a day, `weekly` one email every Monday covering
