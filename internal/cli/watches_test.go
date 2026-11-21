@@ -94,13 +94,49 @@ func TestWatchesCreatePostsBody(t *testing.T) {
 		"type":    "query",
 		"channel": "email",
 		"cadence": "weekly",
-		"params":  map[string]any{"q": "io_uring", "list": "pgsql-hackers"},
+		"params":  map[string]any{"q": "io_uring", "list": []any{"pgsql-hackers"}},
 	}
 	if !reflect.DeepEqual(sent, want) {
 		t.Errorf("body = %v, want %v", sent, want)
 	}
 	if !strings.Contains(stdout, "11111111-2222-3333-4444-555555555555") {
 		t.Errorf("stdout does not render the created watch:\n%s", stdout)
+	}
+}
+
+// A filter watch's params are the search/threads filter flags, typed: ints and
+// bools native, repeatable flags as arrays, and no q needed.
+func TestWatchesCreateFilterParams(t *testing.T) {
+	var got recorded
+	srv := watchServer(t, &got, http.StatusCreated, `{"data":`+sampleWatch+`}`)
+	defer srv.Close()
+
+	if _, _, err := runLantern(t, srv.URL, "watches", "create", "--type", "thread_query",
+		"--sender-id", "42", "--sender-id", "7", "--min-matches", "3",
+		"--has-patch", "--sender-role", "committer", "--path", "src/backend/"); err != nil {
+		t.Fatal(err)
+	}
+	var sent map[string]any
+	if err := json.Unmarshal(got.body, &sent); err != nil {
+		t.Fatalf("body %q: %v", got.body, err)
+	}
+	want := map[string]any{
+		"sender_id":   []any{"42", "7"},
+		"min_matches": float64(3),
+		"has_patch":   true,
+		"sender_role": []any{"committer"},
+		"path":        "src/backend/",
+	}
+	if sent["type"] != "thread_query" || !reflect.DeepEqual(sent["params"], want) {
+		t.Errorf("body = %v, want type thread_query with params %v", sent, want)
+	}
+}
+
+// Arrays in a stored filter watch print comma-joined in the PARAMS cell.
+func TestWatchParamsCellJoinsArrays(t *testing.T) {
+	got := watchParamsCell(map[string]any{"sender_role": []any{"committer", "past_committer"}, "min_matches": float64(3)})
+	if want := "min_matches=3 sender_role=committer,past_committer"; got != want {
+		t.Errorf("cell = %q, want %q", got, want)
 	}
 }
 
@@ -258,7 +294,9 @@ func TestWatchesUsageErrors(t *testing.T) {
 		want string
 	}{
 		{"missing --type", []string{"watches", "create", "--q", "io_uring"}, "--type"},
-		{"missing subject flag", []string{"watches", "create", "--type", "query"}, "--q"},
+		{"filter watch without a filter", []string{"watches", "create", "--type", "query"}, "at least one filter"},
+		{"thread_query without a filter", []string{"watches", "create", "--type", "thread_query", "--cadence", "weekly"}, "at least one filter"},
+		{"two ids on a sender watch", []string{"watches", "create", "--type", "sender", "--sender-id", "1", "--sender-id", "2"}, "exactly one"},
 		{"missing subject flag for guc", []string{"watches", "create", "--type", "guc"}, "--name"},
 		{"unknown type", []string{"watches", "create", "--type", "banana"}, "must be one of"},
 		{"bad cadence arg", []string{"watches", "cadence", "w1", "hourly"}, "daily"},

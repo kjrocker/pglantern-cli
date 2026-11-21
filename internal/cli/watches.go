@@ -16,19 +16,29 @@ import (
 )
 
 // watchTypes are the watch kinds the server accepts, and watchPrimaryFlag maps
-// each to the one flag that carries its subject. Those two — a valid --type and
-// its subject — are the only things checked locally; every other rule (webhook
-// entitlement, watch limits, endpoint ownership) belongs to the server, whose
-// 422/403 is printed verbatim.
-var watchTypes = []string{"thread", "sender", "path", "guc", "query"}
+// each subject-keyed type to the one flag that carries its subject. The filter
+// types (query, thread_query) have no single subject: they take the search /
+// threads filter flags and need at least one. Those checks — a valid --type and
+// its subject — are the only things done locally; every other rule (unknown or
+// invalid filters, webhook entitlement, watch limits, endpoint ownership)
+// belongs to the server, whose 422/403 is printed verbatim.
+var watchTypes = []string{"thread", "sender", "path", "guc", "query", "thread_query"}
 
 var watchPrimaryFlag = map[string]string{
 	"thread": "message-id",
 	"sender": "sender-id",
 	"path":   "path",
 	"guc":    "name",
-	"query":  "q",
 }
+
+// watchFilterFlags are the flags a filter watch's params are built from: the
+// /search and /threads filter set, registered by the same helpers `search` and
+// `threads` use. A query watch sending a threads-only one (--min-matches) gets
+// the server's 422 naming it.
+var watchFilterFlags = append(append(append(append(append(
+	[]string{"q", "sender", "committed", "path", "major", "cf-status"},
+	threadFilterScalars...), threadFilterArrays...),
+	messageGroupScalars...), messageGroupArrays...), threadMatchScalars...)
 
 // watchParamsCell renders a watch's type-specific params as a compact,
 // key-sorted `k=v k=v` cell so the column is stable across rows and types.
@@ -63,6 +73,12 @@ func watchParamValue(v any) string {
 		return strconv.FormatFloat(t, 'f', -1, 64)
 	case nil:
 		return "-"
+	case []any:
+		parts := make([]string, 0, len(t))
+		for _, e := range t {
+			parts = append(parts, watchParamValue(e))
+		}
+		return strings.Join(parts, ",")
 	default:
 		return fmt.Sprint(t)
 	}
@@ -177,16 +193,18 @@ func newWatchesCreateCmd() *cobra.Command {
 		Short: "Create a watch (needs a manage key)",
 		Long: "Create a watch. --type picks what is watched and which subject flag\n" +
 			"applies: thread → --message-id, sender → --sender-id, path → --path,\n" +
-			"guc → --name, query → --q. Everything else is passed through to the\n" +
-			"server, which validates it.",
+			"guc → --name. query and thread_query take the same filter flags as\n" +
+			"`search` and `threads` (at least one): query fires on new messages\n" +
+			"`search` would return, thread_query on threads that match and get a\n" +
+			"new message. There is no --from/--to: a watch matches from now on.\n" +
+			"Everything is passed through to the server, which validates it.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cmd.Flags().Changed("type") {
 				return usagef("watches create requires --type (%s)", strings.Join(watchTypes, "|"))
 			}
 			watchType := cmd.Flags().Lookup("type").Value.String()
-			primary := watchPrimaryFlag[watchType]
-			if !cmd.Flags().Changed(primary) {
+			if primary, ok := watchPrimaryFlag[watchType]; ok && !cmd.Flags().Changed(primary) {
 				return usagef("watches create --type %s requires --%s", watchType, primary)
 			}
 
@@ -216,14 +234,52 @@ func newWatchesCreateCmd() *cobra.Command {
 	addEnumFlag(cmd, "cadence", "email cadence", "daily", "weekly")
 	cmd.Flags().String("endpoint", "", "webhook endpoint id (--channel webhook)")
 	cmd.Flags().String("message-id", "", "thread watch: a Message-Id in the thread")
-	cmd.Flags().Int("sender-id", 0, "sender watch: a sender id")
-	cmd.Flags().String("path", "", "path watch: a source path prefix")
-	cmd.Flags().String("major", "", "path watch: restrict to this major")
 	cmd.Flags().String("name", "", "guc watch: a GUC name")
-	cmd.Flags().String("q", "", "query watch: the search query")
-	cmd.Flags().String("list", "", "query watch: restrict to this mailing list")
-	cmd.Flags().String("sender", "", "query watch: restrict to this sender")
+	cmd.Flags().String("path", "", "path watch: a source path prefix; filter watches: threads touching it")
+	cmd.Flags().String("major", "", "path watch: restrict commits to this major; filter watches: threads landed in it")
+	// The filter set, as on `search` / `threads`. --sender-id is the message
+	// group's repeatable one; a sender watch takes exactly one.
+	cmd.Flags().String("q", "", "filter watches: full-text query (optional)")
+	cmd.Flags().String("sender", "", "filter watches: a message's sender email or name contains this")
+	cmd.Flags().Bool("committed", false, "filter watches: only threads with a landed commit (--committed=false for none)")
+	addEnumFlag(cmd, "cf-status", "filter watches: threads with a commitfest patch in this status", cfSearchStatuses...)
+	addThreadFilterFlags(cmd,
+		"query: messages on any of these lists; thread_query: threads with a message on any",
+		"drop messages (query) or threads (thread_query) on this list")
+	addMessageGroupFlags(cmd,
+		"query: the message subject; thread_query: the thread subject",
+		"sender watch: the sender id; filter watches: a message is from any of these")
+	addThreadMatchFlags(cmd)
 	return cmd
+}
+
+// collectParams builds a JSON params object from the named flags the user set,
+// typed by flag kind: ints and bools native, repeatable flags as string arrays
+// (the server trims, de-dupes and canonicalizes), the rest as strings. Flag
+// names map to param names by dash→underscore, as in collectQuery.
+func collectParams(cmd *cobra.Command, names ...string) map[string]any {
+	params := map[string]any{}
+	for _, name := range names {
+		f := cmd.Flags().Lookup(name)
+		if f == nil || !f.Changed {
+			continue
+		}
+		key := strings.ReplaceAll(name, "-", "_")
+		switch f.Value.Type() {
+		case "int":
+			v, _ := cmd.Flags().GetInt(name)
+			params[key] = v
+		case "bool":
+			v, _ := cmd.Flags().GetBool(name)
+			params[key] = v
+		case "stringArray":
+			v, _ := cmd.Flags().GetStringArray(name)
+			params[key] = v
+		default:
+			params[key] = f.Value.String()
+		}
+	}
+	return params
 }
 
 // watchCreateParams builds the type-specific params object, folding in the
@@ -240,7 +296,11 @@ func watchCreateParams(cmd *cobra.Command, watchType string) (map[string]any, er
 		id, _ := cmd.Flags().GetString("message-id")
 		params["message_id"] = normalizeMessageID(id)
 	case "sender":
-		id, err := cmd.Flags().GetInt("sender-id")
+		ids, _ := cmd.Flags().GetStringArray("sender-id")
+		if len(ids) != 1 {
+			return nil, usagef("a sender watch takes exactly one --sender-id")
+		}
+		id, err := strconv.Atoi(strings.TrimSpace(ids[0]))
 		if err != nil {
 			return nil, usagef("--sender-id must be an integer")
 		}
@@ -250,10 +310,12 @@ func watchCreateParams(cmd *cobra.Command, watchType string) (map[string]any, er
 		add("major", "major")
 	case "guc":
 		add("name", "name")
-	case "query":
-		add("q", "q")
-		add("list", "list")
-		add("sender", "sender")
+	case "query", "thread_query":
+		params = collectParams(cmd, watchFilterFlags...)
+		if len(params) == 0 {
+			return nil, usagef("watches create --type %s needs at least one filter flag "+
+				"(the `search` / `threads` filters, e.g. --q, --sender-role, --list)", watchType)
+		}
 	}
 	return params, nil
 }

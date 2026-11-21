@@ -171,6 +171,8 @@ lantern watches create --type path --path src/backend/access/ --major 17
 lantern watches create --type guc --name work_mem
 lantern watches create --type query --q io_uring --list pgsql-hackers --cadence weekly
 lantern watches create --type query --q io_uring --channel webhook --endpoint <uuid>
+lantern watches create --type query --sender-role committer --has-patch
+lantern watches create --type thread_query --sender-id 42 --min-matches 3
 lantern watches pause <id>            # stop delivering; resume puts it back
 lantern watches cadence <id> weekly
 lantern watches delete <id>           # no prompt; `# deleted <id>` on stderr
@@ -178,9 +180,11 @@ lantern watches endpoints             # ID URL STATUS
 ```
 
 `--type` picks the subject flag: thread → `--message-id`, sender →
-`--sender-id`, path → `--path` (+ `--major`), guc → `--name`, query → `--q` (+
-`--list`, `--sender`). Those two checks — a valid `--type` and its subject flag
-— are all the CLI validates; everything else is the server's 422.
+`--sender-id`, path → `--path` (+ `--major`), guc → `--name`. `query` and
+`thread_query` take the `search` / `threads` filter flags instead (at least one;
+`--q` is optional) and fire on what that search or thread listing would newly
+return. Those checks — a valid `--type` and its subject or a filter — are all
+the CLI validates; everything else is the server's 422.
 
 Email watches carry a cadence: `daily` sends one email a day,
 `weekly` one email every Monday covering everything since the last. Webhook
