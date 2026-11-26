@@ -50,8 +50,8 @@ A key is optional. The CLI defaults to the hosted archive at
 `https://pglantern.com`, and with no key configured it runs on the anonymous
 per-IP tier — every command works out of the box. A key raises the rate limits
 and moves usage onto your account's shared annual pool, which every key on that
-account spends from. That pool runs from your own anniversary (signup date, or
-your subscription's start date once you have one), not the calendar year. API
+account spends from. That pool runs from your own anniversary (the day you
+confirmed your account), not the calendar year. API
 keys are minted in the pgLantern web UI under `/users/api-keys`; `lantern login`
 prompts for one, validates it against the server, and saves the key + host to
 `~/.config/lantern/config.json` (mode 0600):
@@ -500,9 +500,9 @@ off in a terminal.
   a `watches` mutation needs **manage** access. Nothing about the request is
   wrong: mint a manage key at `/users/api-keys` and `lantern login` again (or
   pass it with `--api-key`). Reads keep working on the old key.
-- `watch_limit_reached` (403) — your plan's watch allowance is spent; delete or
-  pause one first. `webhooks_not_available` (403) — webhook delivery isn't on
-  your plan, so create the watch with `--channel email` instead.
+- `watch_limit_reached` (403) — your account's watch allowance is spent; delete
+  or pause one first. `webhooks_not_available` (403) — webhook delivery isn't
+  on for your account, so create the watch with `--channel email` instead.
 - `annual quota exceeded` / `daily quota exceeded` / `burst rate limit exceeded`
   (429) — the budget is capped per-minute, and then per **year** with a key or
   per **day** without one. Keyless, that is the anonymous per-IP tier: log in
