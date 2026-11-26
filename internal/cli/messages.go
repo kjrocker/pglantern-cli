@@ -211,6 +211,7 @@ func newMessagesCmd() *cobra.Command {
 				return err
 			}
 			q := collectQuery(cmd, "list", "from", "to", "dir", "limit", "after", "before")
+			collectArrayQuery(cmd, q, "sender-id")
 			ids, err := collectIDs(cmd, cmd.InOrStdin())
 			if err != nil {
 				return err
@@ -224,6 +225,7 @@ func newMessagesCmd() *cobra.Command {
 	cmd.Flags().String("list", "", "restrict to one mailing list by name")
 	cmd.Flags().String("from", "", "ISO-8601 lower bound on sent_at")
 	cmd.Flags().String("to", "", "ISO-8601 upper bound on sent_at")
+	cmd.Flags().StringArray("sender-id", nil, "only messages from this sender id (repeatable; any-of)")
 	addEnumFlag(cmd, "dir", "sort direction", "asc", "desc")
 	addPaginationFlags(cmd)
 	addIDFlag(cmd, "fetch exactly this Message-Id")

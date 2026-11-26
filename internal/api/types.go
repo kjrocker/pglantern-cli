@@ -29,6 +29,7 @@ type ListStats struct {
 }
 
 type Sender struct {
+	ID          int    `json:"id"`
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
 }

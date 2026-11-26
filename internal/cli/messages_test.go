@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"net/url"
+	"reflect"
 	"testing"
 
 	"git.kehvyn.dev/kevin/pglantern-cli/internal/api"
@@ -183,5 +185,33 @@ func TestAttachmentPatchCell(t *testing.T) {
 				t.Errorf("attachmentPatchCell() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestMessagesSenderIDFlag(t *testing.T) {
+	cases := []struct {
+		args []string
+		want map[string][]string
+	}{
+		{[]string{"--sender-id", "42"}, map[string][]string{"sender_id": {"42"}}},
+		{[]string{"--sender-id", "42", "--sender-id", "97", "--dir", "asc"},
+			map[string][]string{"sender_id[]": {"42", "97"}, "dir": {"asc"}}},
+	}
+	for _, c := range cases {
+		_, query, _ := runStub(t, `{"data":[]}`, append([]string{"messages"}, c.args...)...)
+		got, err := url.ParseQuery(query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for k, v := range c.want {
+			if !reflect.DeepEqual(got[k], v) {
+				t.Errorf("%v: %s = %v, want %v (query %q)", c.args, k, got[k], v, query)
+			}
+		}
+		if len(c.args) == 2 {
+			if _, ok := got["sender_id[]"]; ok {
+				t.Errorf("one --sender-id sent as a list: %q", query)
+			}
+		}
 	}
 }

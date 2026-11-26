@@ -99,6 +99,7 @@ Start from whichever entity the question is about:
 | ------------------------------------------ | --------------------------------------------------------------- |
 | What lists exist?                          | `lantern lists`                                                 |
 | Recent/filtered messages                   | `lantern messages --list pgsql-hackers --limit 10`              |
+| One person's messages (all their ids)      | `lantern messages --sender-id 42 --sender-id 97 --dir asc`      |
 | One message (+ body, attachments)          | `lantern messages get '<message-id>'`                           |
 | Open a message's archive page in a browser | `lantern messages open '<message-id>'`                          |
 | Many messages with bodies, one request     | `lantern messages --full --id -`                                |
